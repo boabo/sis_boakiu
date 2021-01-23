@@ -13,8 +13,7 @@ HISTORIAL DE MODIFICACIONES:
 include_once(dirname(__FILE__).'/../../lib/lib_modelo/ConexionSqlServer.php');
 
 class ACTBoleto extends ACTbase{
-
-
+    
     function getTicketInformationRecursive() {
         $nro_ticket = $this->objParam->getParametro('nro_ticket');
         $array = array();

@@ -48,7 +48,7 @@ class ACTBoleto extends ACTbase{
             $send = array(
                 "error" => false,
                 "errorTicket" => true,
-                "message" =>  "No se pudo encontrar el ticket solicitado",
+                "message" =>  "No se pudo encontrar el ticket solicitado, el mismo puede estar en un estado VOID o no haber sido emitido por AMADEUS",
             );
             echo json_encode($send);
 

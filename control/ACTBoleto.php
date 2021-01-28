@@ -47,7 +47,7 @@ class ACTBoleto extends ACTbase{
         } else {
             $send = array(
                 "error" => true,
-                "mensaje" =>  "No se pudo encontrar el ticket solicitado",
+                "message" =>  "No se pudo encontrar el ticket solicitado",
             );
             echo json_encode($send);
 

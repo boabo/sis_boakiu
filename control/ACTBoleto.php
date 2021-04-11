@@ -14,33 +14,92 @@ include_once(dirname(__FILE__).'/../../lib/lib_modelo/ConexionSqlServer.php');
 
 class ACTBoleto extends ACTbase{
     
-    function getTicketInformationRecursive() {
+    function verifyPermissionForDisabled() {
+
+        $curl = curl_init();
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => $_SESSION['_PXP_ND_URL'].'/api/boa-stage-nd/Ticket/verifyPermissionForDisabled',
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_POSTFIELDS =>'{
+                "id_usuario": '.$_SESSION['ss_id_usuario'].'
+            }
+            ',
+            CURLOPT_HTTPHEADER => array(
+                'Authorization: ' . $_SESSION['_PXP_ND_TOKEN'],
+                'Content-Type: application/json'
+            ),
+        ));
+        $response = curl_exec($curl);
+
+        curl_close($curl);
+        echo $response;
+        exit;
+
+
+
+    }
+  function getTicketInformationRecursive() {
         $nro_ticket = $this->objParam->getParametro('nro_ticket');
+
+
+
+        $this->objFunc=$this->create('MODBoleto');
+
+        $this->res=$this->objFunc->verFacturaErpBoleto($this->objParam);
+
+        if($this->res->getTipo()!='EXITO'){
+
+            $this->res->imprimirRespuesta($this->res->generarJson());
+            exit;
+        }
+
+        $datosErp = $this->res->getDatos();
+
+
         $array = array();
 
 
-        $conexion = new ConexionSqlServer('172.17.110.6', 'SPConnection', 'Passw0rd', 'DBStage');
-        $conn = $conexion->conectarSQL();
+        $curl = curl_init();
 
-        $query_string = "Select DBStage.dbo.fn_getTicketInformation('$nro_ticket') "; // boleto miami 9303852215072
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => $_SESSION['_PXP_ND_URL'].'/api/boa-stage-nd/Ticket/getTicketInformation',
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_POSTFIELDS =>'{
+                "ticketNumber": '.$nro_ticket.',
+                "recursive": false
+            }
+            ',
+            CURLOPT_HTTPHEADER => array(
+                'Authorization: ' . $_SESSION['_PXP_ND_TOKEN'],
+                'Content-Type: application/json'
+            ),
+        ));
 
-        //$query_string = "select * from AuxBSPVersion";
-        //$query_string = utf8_decode("select FlightItinerary from FactTicket where TicketNumber = '9302400056027'");
-        @mssql_query('SET CONCAT_NULL_YIELDS_NULL ON');
-        @mssql_query('SET ANSI_WARNINGS ON');
-        @mssql_query('SET ANSI_PADDING ON');
+        $response = curl_exec($curl);
 
-        $query = @mssql_query($query_string, $conn);
-        $row = mssql_fetch_array($query, MSSQL_ASSOC);
+        curl_close($curl);
 
-        $data_json_string = $row['computed'];
-        $data_json = json_decode(preg_replace('/[\x00-\x1F\x80-\xFF]/', '', $data_json_string), true);
+        $data_json = json_decode(preg_replace('/[\x00-\x1F\x80-\xFF]/', '', $response), true);
+
 
         if($data_json != null) {
 
             $send = array(
                 "nro_ticket" =>  $nro_ticket,
                 "data" =>  $data_json,
+                "data_erp" =>  json_decode($datosErp['mensaje']),
             );
 
             echo json_encode($send);
@@ -59,6 +118,12 @@ class ACTBoleto extends ACTbase{
 
     function getTicketInformationRecursiveForLiqui() {
         $billete = $this->objParam->getParametro('billete');
+
+
+
+
+
+
         $array = array();
 
 
@@ -105,6 +170,7 @@ class ACTBoleto extends ACTbase{
             /*var_dump($data["taxes"]);
             exit;*/
             $exento = 0;
+            $iva = 0;
 
             //var_dump($taxes);
             foreach ($taxes as $tax) {
@@ -112,8 +178,12 @@ class ACTBoleto extends ACTbase{
                 //var_dump($tax->taxCode);
                 //var_dump($tax["taxCode"]);
                 //exit;
-                if(trim($tax["taxCode"]) !== 'BO' && trim($tax["taxCode"]) !== 'QM') {
+                if(trim($tax["taxCode"]) !== 'BO' && trim($tax["taxCode"]) !== 'QM' && trim($tax["taxCode"]) !== 'CP') {
                     $exento = $exento + $tax["taxAmount"];
+                }
+
+                if(trim($tax["taxCode"]) === 'BO') {
+                    $iva = $iva + $tax["taxAmount"]; // solo deberia ser uno pero por si acaso
                 }
             }
 
@@ -127,7 +197,16 @@ class ACTBoleto extends ACTbase{
                 'issueAgencyCode' => $data["issueAgencyCode"], // este es el noiata
                 'netAmount' => $netAmount,
                 'exento' => $exento,
-                'payment' => $data["payment"]
+                'payment' => $data["payment"],
+                'taxes' => $data["taxes"],
+                'iva' => $iva,
+                'iva_contabiliza_no_liquida' => $iva,
+                'tiene_nota' => 'no',
+                'concepto_para_nota'=> trim($ticketNumber).'/'.trim($data["itinerary"]),
+                'foid'=> trim($data["FOID"]),
+                'fecha_emision'=> trim($data["issueDate"]),
+                'concilliation' => $data["concilliation"],
+
             ));
 
             $OriginalTicket = $data["OriginalTicket"];
@@ -135,9 +214,13 @@ class ACTBoleto extends ACTbase{
             while ($OriginalTicket != '') {
 
                 $exento_hijo = 0;
+                $iva_hijo = 0;
                 foreach ($OriginalTicket["taxes"] as $tax) {
-                    if($OriginalTicket["taxCode"] != 'BO' && $tax["taxCode"] != 'QM') {
+                    if($OriginalTicket["taxCode"] != 'BO' && $tax["taxCode"] != 'QM' && $tax["taxCode"] != 'CP') {
                         $exento_hijo = $exento_hijo + $tax["taxAmount"];
+                    }
+                    if(trim($tax["taxCode"]) === 'BO') {
+                        $iva_hijo = $iva_hijo + $tax["taxAmount"]; // solo deberia ser uno pero por si acaso
                     }
                 }
                 array_push($array, array('seleccionado' => 'si',
@@ -150,7 +233,16 @@ class ACTBoleto extends ACTbase{
                     'issueAgencyCode' => $data["issueAgencyCode"],
                     'netAmount' => $data["netAmount"],
                     'exento' => $exento_hijo,
-                    'payment' => $OriginalTicket["payment"]
+                    'payment' => $OriginalTicket["payment"],
+                    'taxes' => $OriginalTicket["taxes"],
+                    'iva' => $iva_hijo,
+                    'iva_contabiliza_no_liquida' => $iva_hijo,
+                    'tiene_nota' => 'no',
+                    'concepto_para_nota'=> trim($OriginalTicket["ticketNumber"]).'/'.trim($OriginalTicket["itinerary"]),
+                    'foid'=> trim($OriginalTicket["FOID"]),
+                    'fecha_emision'=> trim($OriginalTicket["issueDate"]),
+                    'concilliation' => $OriginalTicket["concilliation"]
+
                 ));
 
                 $OriginalTicket = $OriginalTicket["OriginalTicket"];

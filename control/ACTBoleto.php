@@ -60,6 +60,7 @@ class ACTBoleto extends ACTbase{
         }
 
         $datosErp = $this->res->getDatos();
+      
 
 
         $array = array();
@@ -88,6 +89,7 @@ class ACTBoleto extends ACTbase{
         ));
 
         $response = curl_exec($curl);
+        
 
         curl_close($curl);
 
@@ -265,6 +267,107 @@ class ACTBoleto extends ACTbase{
             echo json_encode($send);
 
         }
+
+
+    }
+
+    function disabledTicket() {
+        $ticketNumber = $this->objParam->getParametro('ticketNumber');
+        $motivo = $this->objParam->getParametro('motivo');
+        $pnrCode = $this->objParam->getParametro('pnrCode');
+        $issueDate = $this->objParam->getParametro('issueDate');
+
+        $this->objFunc=$this->create('sis_ventas_facturacion/MODConsultaBoletos');
+        $this->res=$this->objFunc->consultaBoletoInhabilitacion($this->objParam);
+
+        if($this->res->getTipo()!='EXITO'){
+
+			$this->res->imprimirRespuesta($this->res->generarJson());
+			exit;
+		}
+
+        $res_erp = $this->res->getDatos();
+        if($res_erp["inhabilitar"] === 'true' || $res_erp["periodo"] === 'true') {
+
+            //debemos actualizar tambien en el stage
+
+
+            $curl = curl_init();
+            curl_setopt_array($curl, array(
+                CURLOPT_URL => $_SESSION['_PXP_ND_URL'].'/api/boa-stage-nd/Ticket/updateTicketStatus',
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_ENCODING => '',
+                CURLOPT_MAXREDIRS => 10,
+                CURLOPT_TIMEOUT => 0,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                CURLOPT_CUSTOMREQUEST => 'POST',
+                CURLOPT_POSTFIELDS =>'{
+                    "ticketNumber": '.$ticketNumber.',
+                    "pnrCode": "'.$pnrCode.'",
+                    "issueDate": "'.$issueDate.'",
+                    "motivo": "'.motivo.'"
+                }
+                ',
+                CURLOPT_HTTPHEADER => array(
+                    'Authorization: ' . $_SESSION['_PXP_ND_TOKEN'],
+                    'Content-Type: application/json'
+                ),
+            ));
+            $response = curl_exec($curl);
+
+            curl_close($curl);
+            $data_json = json_decode(preg_replace('/[\x00-\x1F\x80-\xFF]/', '', $response), true);
+
+            $anulado_stage = 'N';
+            if($data_json[0]['Result'] == 1) {
+                $anulado_stage = 'Y';
+            }
+            $anulado_erp = 'N';
+            if($res_erp["inhabilitar"] === 'true') {
+                $anulado_erp = 'Y';
+            }
+
+            $send = array(
+                "response_from_erp" =>  $res_erp["mensaje"], // todo
+                "response_from_stage" =>  $data_json,
+                "success" => true,
+                "anulado_stage" => $anulado_stage,
+                "anulado_erp" => $anulado_erp
+
+            );
+
+            $this->objParam->addParametro('boleto', $ticketNumber);
+            $this->objParam->addParametro('motivo', $motivo);
+            $this->objParam->addParametro('mensaje_stage', json_encode($data_json));
+            $this->objParam->addParametro('mensaje_erp', $res_erp["mensaje"]);
+            $this->objParam->addParametro('anulado_stage', $anulado_stage);
+            $this->objParam->addParametro('anulado_erp', $anulado_erp);
+            $this->objFunc=$this->create('MODBoleto');
+            $this->res=$this->objFunc->guardarLogAnularBoleto($this->objParam);
+            if ($this->res->getTipo() == 'ERROR') {
+                $error = 'error';
+                $mensaje_log_completo = "Error al guardar el fila en tabla  " . $this->res->getMensajeTec();
+                $send["mensaje_log_completo"] = $mensaje_log_completo;
+            }
+
+
+            echo json_encode($send);
+
+        } else {
+
+            //no se pudo anular por que no existe el boleto o no se ha migrado
+            $send = array(
+                "response_from_erp" =>  $res_erp["mensaje"], // todo
+                "success" => false
+            );
+            echo json_encode($send);
+
+        }
+
+
+
+
 
 
     }

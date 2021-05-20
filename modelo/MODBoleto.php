@@ -24,7 +24,28 @@ class MODBoleto extends MODbase{
         $this->tipo_procedimiento='IME';
 
         //Define los parametros para la funcion
-        $this->setParametro('billete','billete','varchar');
+        $this->setParametro('nro_ticket','nro_ticket','varchar');
+
+        //Ejecuta la instruccion
+        $this->armarConsulta();
+        $this->ejecutarConsulta();
+
+        //Devuelve la respuesta
+        return $this->respuesta;
+    }
+    function guardarLogAnularBoleto(){
+        //Definicion de variables para ejecucion del procedimiento
+        $this->procedimiento='kiu.ft_boa_kiu_json';
+        $this->transaccion='KIU_LOGANU_JSON_IME';
+        $this->tipo_procedimiento='IME';
+
+        //Define los parametros para la funcion
+        $this->setParametro('boleto','boleto','varchar');
+        $this->setParametro('motivo','motivo','varchar');
+        $this->setParametro('mensaje_erp','mensaje_erp','varchar');
+        $this->setParametro('mensaje_stage','mensaje_stage','varchar');
+        $this->setParametro('anulado_erp','anulado_erp','varchar');
+        $this->setParametro('anulado_stage','anulado_stage','varchar');
 
         //Ejecuta la instruccion
         $this->armarConsulta();

@@ -13,7 +13,7 @@ HISTORIAL DE MODIFICACIONES:
 include_once(dirname(__FILE__).'/../../lib/lib_modelo/ConexionSqlServer.php');
 
 class ACTBoleto extends ACTbase{
-    
+
     function verifyPermissionForDisabled() {
 
         $curl = curl_init();
@@ -47,8 +47,6 @@ class ACTBoleto extends ACTbase{
   function getTicketInformationRecursive() {
         $nro_ticket = $this->objParam->getParametro('nro_ticket');
 
-
-
         $this->objFunc=$this->create('MODBoleto');
 
         $this->res=$this->objFunc->verFacturaErpBoleto($this->objParam);
@@ -60,7 +58,7 @@ class ACTBoleto extends ACTbase{
         }
 
         $datosErp = $this->res->getDatos();
-      
+
 
 
         $array = array();
@@ -89,19 +87,45 @@ class ACTBoleto extends ACTbase{
         ));
 
         $response = curl_exec($curl);
-        
+
 
         curl_close($curl);
 
         $data_json = json_decode(preg_replace('/[\x00-\x1F\x80-\xFF]/', '', $response), true);
 
 
+
+        /*Aqui aumentando para que recuperemos solo la forma de pago tarjeta*/
+        $formas_pago = count($data_json[0]['payment']);
+
+        $forma_pago_cc = array();
+
+        for ($i=0; $i < $formas_pago; $i++) {
+            if ($data_json[0]['payment'][$i]['paymentCode'] == 'CC' && $data_json[0]['payment'][$i]['paymentAmount'] > 0) {
+              array_push($forma_pago_cc, $data_json[0]['payment'][$i]);
+            }
+        }
+
+
+        $formas_pago_code = count($data_json[0]['concilliation']);
+
+        $forma_pago_cc_code = array();
+
+        for ($i=0; $i < $formas_pago_code; $i++) {
+            if ($data_json[0]['concilliation'][$i]) {
+              array_push($forma_pago_cc_code, $data_json[0]['concilliation'][$i]);
+            }
+        }
+
+        /********************************************************************/
         if($data_json != null) {
 
             $send = array(
                 "nro_ticket" =>  $nro_ticket,
                 "data" =>  $data_json,
                 "data_erp" =>  json_decode($datosErp['mensaje']),
+                "forma_pago_tarjeta" => $forma_pago_cc,
+                "forma_pago_tarjeta_code" => $forma_pago_cc_code,
             );
 
             echo json_encode($send);
@@ -371,6 +395,334 @@ class ACTBoleto extends ACTbase{
 
 
     }
+
+    /*Aumentando para modificar lar tarjetas*/
+    function modificarTarjetasErp(){
+
+      $this->objFunc=$this->create('MODBoleto');
+      $this->res=$this->objFunc->modificarTarjetasErp($this->objParam);
+
+      if($this->res->getTipo()!='EXITO'){
+        $this->res->imprimirRespuesta($this->res->generarJson());
+        exit;
+      }
+
+
+
+      /*Aqui para guardar en el log de datos*/
+      $this->objParam->addParametro('observaciones', "Modificacion MP Tarjetas ERP y STAGE");
+      $this->objFunc=$this->create('MODBoleto');
+      $this->res2=$this->objFunc->logModificaciones($this->objParam);
+
+      if($this->res2->getTipo()!='EXITO'){
+        $this->res2->imprimirRespuesta($this->res2->generarJson());
+        exit;
+      }
+
+
+
+        /*Incluyenco la modificacion en el STAGE*/
+        $data = array("ticketNumber"=>$this->objParam->getParametro('boleto_a_modificar'),
+                      "nroTarjeta"=>$this->objParam->getParametro('num_tarjeta_1'),
+                      "codAutorizacion"=>$this->objParam->getParametro('cod_tarjeta_1'),
+                      "issueDate"=>$this->objParam->getParametro('issueDate')
+                    );
+        $datosUpdate = json_encode($data);
+
+        $envio_dato = $datosUpdate;
+
+        $request =  'http://sms.obairlines.bo/CommissionServices/ServiceComision.svc/UpdatePaymentMethod';
+        $session = curl_init($request);
+        curl_setopt($session, CURLOPT_CUSTOMREQUEST, "POST");
+        curl_setopt($session, CURLOPT_POSTFIELDS, $envio_dato);
+        curl_setopt($session, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($session, CURLOPT_HTTPHEADER, array(
+                'Content-Type: application/json',
+                'Content-Length: ' . strlen($envio_dato))
+        );
+
+        $result = curl_exec($session);
+        curl_close($session);
+
+
+
+        $respuesta = json_decode($result);
+
+        $respuesta_final = json_decode($respuesta->UpdatePaymentMethodResult);
+
+        $respuesta_estado_servicio = $respuesta_final->State;
+
+        if ($respuesta_estado_servicio == true) {
+          $respuesta_base_datos = $respuesta_final->Data;
+
+          if ($respuesta_base_datos) {
+            $respuesta_mensaje = $respuesta_base_datos[0]->Result;
+
+            if ($respuesta_mensaje == 1) {
+              $respuesta_mensaje = "Medio de Pago modificado Correctamente en STAGE";
+              $error = false;
+            } else {
+              $error = true;
+              $respuesta_mensaje = 'Error en la modificacion DB';
+            }
+
+          } else {
+            $error = true;
+            $respuesta_mensaje = 'Error en el Servicio cod: 2';
+          }
+
+        } else {
+          $error = true;
+          $respuesta_mensaje = 'Error en el servicio cod: 1';
+        }
+
+
+
+        if ($this->objParam->getParametro('num_tarjeta_2') != '' && $this->objParam->getParametro('num_tarjeta_2') != null) {
+
+          $data2 = array("ticketNumber"=>$this->objParam->getParametro('boleto_a_modificar'),
+                        "nroTarjeta"=>$this->objParam->getParametro('num_tarjeta_2'),
+                        "codAutorizacion"=>$this->objParam->getParametro('cod_tarjeta_2'),
+                        "issueDate"=>$this->objParam->getParametro('issueDate'));
+          $datosUpdate2 = json_encode($data2);
+
+          $envio_dato2 = $datosUpdate2;
+
+          $request2 =  'http://sms.obairlines.bo/CommissionServices/ServiceComision.svc/UpdatePaymentMethod';
+          $session2 = curl_init($request2);
+          curl_setopt($session2, CURLOPT_CUSTOMREQUEST, "POST");
+          curl_setopt($session2, CURLOPT_POSTFIELDS, $envio_dato2);
+          curl_setopt($session2, CURLOPT_RETURNTRANSFER, true);
+          curl_setopt($session2, CURLOPT_HTTPHEADER, array(
+                  'Content-Type: application/json',
+                  'Content-Length: ' . strlen($envio_dato2))
+          );
+
+          $result2 = curl_exec($session2);
+          curl_close($session2);
+
+          $respuesta2 = json_decode($result2);
+
+          $respuesta_final2 = json_decode($respuesta2->UpdatePaymentMethodResult);
+
+          $respuesta_estado_servicio2 = $respuesta_final2->State;
+
+          if ($respuesta_estado_servicio2 == true) {
+            $respuesta_base_datos2 = $respuesta_final2->Data;
+
+            if ($respuesta_base_datos2) {
+              $respuesta_mensaje2 = $respuesta_base_datos2[0]->Result;
+
+              if ($respuesta_mensaje2 == 1) {
+                $respuesta_mensaje2 = "Medios de Pago modificados Correctamente en STAGE";
+                $error2 = false;
+              } else {
+                $error2 = true;
+                $respuesta_mensaje2 = 'Error en la modificacion DB';
+              }
+
+            } else {
+              $error2 = true;
+              $respuesta_mensaje2 = 'Error en el Servicio cod: 2';
+            }
+
+          } else {
+            $error2 = true;
+            $respuesta_mensaje2 = 'Error en el servicio cod: 1';
+          }
+
+          if (($error == false) && ($error2 == false)) {
+
+
+            $send = array(
+                "error" =>  $error, // todo
+                "data" => ["mensaje_exito" => $respuesta_mensaje2]
+            );
+            echo json_encode($send);
+
+          } else {
+
+            $send = array(
+                "error" =>  $error, // todo
+                "data" => ["mensaje_exito" => $respuesta_mensaje2]
+            );
+            echo json_encode($send);
+
+          }
+
+        } else {
+
+
+          $send = array(
+              "error" =>  $error, // todo
+              "data" => ["mensaje_exito" => "Datos Modificados Correctamente en ERP y Stage"]
+          );
+          echo json_encode($send);
+        }
+
+        /****************************************/
+
+
+
+
+  	}
+
+    function modificarTarjetaStage(){
+
+      $this->objParam->addParametro('nro_boleto', $this->objParam->getParametro('boleto_a_modificar'));
+      $this->objParam->addParametro('nro_tarjeta_1_old', $this->objParam->getParametro('nro_tarjeta_1_old'));
+      $this->objParam->addParametro('nro_autorizacion_1_old', $this->objParam->getParametro('nro_autorizacion_1_old'));
+      $this->objParam->addParametro('nro_tarjeta_2_old', $this->objParam->getParametro('nro_tarjeta_2_old'));
+      $this->objParam->addParametro('nro_autorizacion_2_old', $this->objParam->getParametro('nro_autorizacion_2_old'));
+      $this->objParam->addParametro('num_tarjeta_1', $this->objParam->getParametro('num_tarjeta_1'));
+      $this->objParam->addParametro('cod_tarjeta_1', $this->objParam->getParametro('cod_tarjeta_1'));
+      $this->objParam->addParametro('num_tarjeta_2', $this->objParam->getParametro('num_tarjeta_2'));
+      $this->objParam->addParametro('cod_tarjeta_2', $this->objParam->getParametro('cod_tarjeta_2'));
+      $this->objParam->addParametro('observaciones', "Modificacion MP Tarjetas Solo Stage");
+      $this->objFunc=$this->create('MODBoleto');
+      $this->res2=$this->objFunc->logModificaciones($this->objParam);
+
+      if($this->res2->getTipo()!='EXITO'){
+        $this->res2->imprimirRespuesta($this->res2->generarJson());
+        exit;
+      }
+
+
+      $data = array("ticketNumber"=>$this->objParam->getParametro('boleto_a_modificar'),
+                    "nroTarjeta"=>$this->objParam->getParametro('num_tarjeta_1'),
+                    "codAutorizacion"=>$this->objParam->getParametro('cod_tarjeta_1'),
+                    "issueDate"=>$this->objParam->getParametro('issueDate'));
+      $datosUpdate = json_encode($data);
+
+      $envio_dato = $datosUpdate;
+
+      $request =  'http://sms.obairlines.bo/CommissionServices/ServiceComision.svc/UpdatePaymentMethod';
+      $session = curl_init($request);
+      curl_setopt($session, CURLOPT_CUSTOMREQUEST, "POST");
+      curl_setopt($session, CURLOPT_POSTFIELDS, $envio_dato);
+      curl_setopt($session, CURLOPT_RETURNTRANSFER, true);
+      curl_setopt($session, CURLOPT_HTTPHEADER, array(
+              'Content-Type: application/json',
+              'Content-Length: ' . strlen($envio_dato))
+      );
+
+      $result = curl_exec($session);
+      curl_close($session);
+
+      $respuesta = json_decode($result);
+
+      $respuesta_final = json_decode($respuesta->UpdatePaymentMethodResult);
+
+      $respuesta_estado_servicio = $respuesta_final->State;
+
+      if ($respuesta_estado_servicio == true) {
+        $respuesta_base_datos = $respuesta_final->Data;
+
+        if ($respuesta_base_datos) {
+          $respuesta_mensaje = $respuesta_base_datos[0]->Result;
+
+          if ($respuesta_mensaje == 1) {
+            $respuesta_mensaje = "Medio de Pago modificado Correctamente en STAGE";
+            $error = false;
+          } else {
+            $error = true;
+            $respuesta_mensaje = 'Error en la modificacion DB';
+          }
+
+        } else {
+          $error = true;
+          $respuesta_mensaje = 'Error en el Servicio cod: 2';
+        }
+
+      } else {
+        $error = true;
+        $respuesta_mensaje = 'Error en el servicio cod: 1';
+      }
+
+      if ($this->objParam->getParametro('num_tarjeta_2') != '' && $this->objParam->getParametro('num_tarjeta_2') != null) {
+
+        $data2 = array("ticketNumber"=>$this->objParam->getParametro('boleto_a_modificar'),
+                      "nroTarjeta"=>$this->objParam->getParametro('num_tarjeta_2'),
+                      "codAutorizacion"=>$this->objParam->getParametro('cod_tarjeta_2'),
+                      "issueDate"=>$this->objParam->getParametro('issueDate'));
+        $datosUpdate2 = json_encode($data2);
+
+        $envio_dato2 = $datosUpdate2;
+
+        $request2 =  'http://sms.obairlines.bo/CommissionServices/ServiceComision.svc/UpdatePaymentMethod';
+        $session2 = curl_init($request2);
+        curl_setopt($session2, CURLOPT_CUSTOMREQUEST, "POST");
+        curl_setopt($session2, CURLOPT_POSTFIELDS, $envio_dato2);
+        curl_setopt($session2, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($session2, CURLOPT_HTTPHEADER, array(
+                'Content-Type: application/json',
+                'Content-Length: ' . strlen($envio_dato2))
+        );
+
+        $result2 = curl_exec($session2);
+        curl_close($session2);
+
+        $respuesta2 = json_decode($result2);
+
+        $respuesta_final2 = json_decode($respuesta2->UpdatePaymentMethodResult);
+
+        $respuesta_estado_servicio2 = $respuesta_final2->State;
+
+        if ($respuesta_estado_servicio2 == true) {
+          $respuesta_base_datos2 = $respuesta_final2->Data;
+
+          if ($respuesta_base_datos2) {
+            $respuesta_mensaje2 = $respuesta_base_datos2[0]->Result;
+
+            if ($respuesta_mensaje2 == 1) {
+              $respuesta_mensaje2 = "Medios de Pago modificados Correctamente en STAGE";
+              $error2 = false;
+            } else {
+              $error2 = true;
+              $respuesta_mensaje2 = 'Error en la modificacion DB';
+            }
+
+          } else {
+            $error2 = true;
+            $respuesta_mensaje2 = 'Error en el Servicio cod: 2';
+          }
+
+        } else {
+          $error2 = true;
+          $respuesta_mensaje2 = 'Error en el servicio cod: 1';
+        }
+
+        if (($error == false) && ($error2 == false)) {
+
+          $send = array(
+              "error" =>  $error, // todo
+              "data" => ["mensaje_exito" => $respuesta_mensaje2]
+          );
+          echo json_encode($send);
+
+        } else {
+
+          $send = array(
+              "error" =>  $error, // todo
+              "data" => ["mensaje_exito" => $respuesta_mensaje2]
+          );
+          echo json_encode($send);
+
+        }
+
+      } else {
+
+        $send = array(
+            "error" =>  $error, // todo
+            "data" => ["mensaje_exito" => $respuesta_mensaje]
+        );
+        echo json_encode($send);
+
+      }
+
+    /****************************************/
+  }
+
 
 }
 

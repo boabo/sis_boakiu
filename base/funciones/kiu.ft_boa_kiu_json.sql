@@ -351,7 +351,7 @@ BEGIN
 
                     if (v_codigo_tarjeta is not null and v_codigo_fp = 'CC') then
                         if (substring(v_parametros.num_tarjeta_1::varchar from 1 for 1) != 'X') then
-                            v_res = pxp.f_valida_numero_tarjeta_credito(v_parametros.num_tarjeta_1::varchar,v_codigo_tarjeta);
+                            v_res = pxp.f_valida_numero_tarjeta_credito(trim(v_parametros.num_tarjeta_1::varchar),v_codigo_tarjeta);
                         end if;
                     end if;
              /*********************************************************************/
@@ -384,8 +384,8 @@ BEGIN
                                   v_id_boleto_amadeus,--2
                                   v_parametros.monto_fp_1::numeric,--3
                                   v_code_mp,--5
-                                  v_parametros.num_tarjeta_1,--6
-                                  v_parametros.cod_tarjeta_1,--7
+                                  trim(v_parametros.num_tarjeta_1),--6
+                                  trim(v_parametros.cod_tarjeta_1),--7
                                   p_id_usuario,--8
                                   v_parametros.forma_pago_1::integer,--9
                                   1,--10
@@ -419,7 +419,7 @@ BEGIN
 
                           if (v_codigo_tarjeta2 is not null and v_codigo_fp2 = 'CC') then
                               if (substring(v_parametros.num_tarjeta_2::varchar from 1 for 1) != 'X') then
-                                  v_res2 = pxp.f_valida_numero_tarjeta_credito(v_parametros.num_tarjeta_2::varchar,v_codigo_tarjeta2);
+                                  v_res2 = pxp.f_valida_numero_tarjeta_credito(trim(v_parametros.num_tarjeta_2::varchar),v_codigo_tarjeta2);
                               end if;
                           end if;
                    /*********************************************************************/
@@ -443,8 +443,8 @@ BEGIN
                                   v_id_boleto_amadeus,--2
                                   v_parametros.monto_fp_2::numeric,--3
                                   v_code_mp_2,--5
-                                  v_parametros.num_tarjeta_2,--6
-                                  v_parametros.cod_tarjeta_2,--7
+                                  trim(v_parametros.num_tarjeta_2),--6
+                                  trim(v_parametros.cod_tarjeta_2),--7
                                   p_id_usuario,--8
                                   v_parametros.forma_pago_2::integer,--9
                                   1,--10
@@ -467,8 +467,8 @@ BEGIN
 
 
                 		update obingresos.tboleto_amadeus_forma_pago set
-                        numero_tarjeta = v_parametros.num_tarjeta_1,
-                        codigo_tarjeta = v_parametros.cod_tarjeta_1,
+                        numero_tarjeta = trim(v_parametros.num_tarjeta_1),
+                        codigo_tarjeta = trim(v_parametros.cod_tarjeta_1),
                         id_usuario_mod = p_id_usuario,
                         fecha_mod = now(),
                         modificado = 'si'
@@ -489,8 +489,8 @@ BEGIN
 
 
                                   update obingresos.tboleto_amadeus_forma_pago set
-                                  numero_tarjeta = v_parametros.num_tarjeta_2,
-                                  codigo_tarjeta = v_parametros.cod_tarjeta_2,
+                                  numero_tarjeta = trim(v_parametros.num_tarjeta_2),
+                                  codigo_tarjeta = trim(v_parametros.cod_tarjeta_2),
                                   id_usuario_mod = p_id_usuario,
                                   fecha_mod = now(),
                                   modificado = 'si'
@@ -537,8 +537,8 @@ BEGIN
 
 
           		IF  pxp.f_existe_parametro(p_tabla,'forma_pago_2') THEN
-                	v_num_tarjeta_2 = v_parametros.num_tarjeta_2;
-                    v_cod_tarjeta_2 = v_parametros.cod_tarjeta_2;
+                	v_num_tarjeta_2 = trim(v_parametros.num_tarjeta_2);
+                    v_cod_tarjeta_2 = trim(v_parametros.cod_tarjeta_2);
                     nro_tarjeta_2_old = v_parametros.nro_tarjeta_2_old;
                     nro_autorizacion_2_old = v_parametros.nro_autorizacion_2_old;
                 end if;
@@ -569,8 +569,8 @@ BEGIN
                           v_parametros.nro_autorizacion_1_old,--4
                           nro_tarjeta_2_old,--5
                           nro_autorizacion_2_old,--6
-                          v_parametros.num_tarjeta_1,--7
-                          v_parametros.cod_tarjeta_1,--8
+                          trim(v_parametros.num_tarjeta_1),--7
+                          trim(v_parametros.cod_tarjeta_1),--8
                           v_num_tarjeta_2,--9
                           v_cod_tarjeta_2,--10
                           v_parametros.observaciones || ' Modificado por: ' || v_responsable,--11

@@ -196,6 +196,13 @@ BEGIN
                     where  bolam.nro_boleto = trim(v_parametros.nro_ticket)
                     and (bolfp.numero_tarjeta != '' and bolfp.numero_tarjeta is not null)
                     and (bolfp.codigo_tarjeta != '' and bolfp.codigo_tarjeta is not null)
+            ), t_permiso_transaccion  as (
+            	select count(*) as permiso
+                from segu.trol_procedimiento_gui trpg
+                         INNER JOIN segu.tprocedimiento_gui tpg on tpg.id_procedimiento_gui = trpg.id_procedimiento_gui
+                         INNER JOIN segu.tprocedimiento tp on tp.id_procedimiento = tpg.id_procedimiento
+                         INNER JOIN segu.tusuario_rol tur on tur.id_rol = trpg.id_rol
+                where tp.codigo = 'KIU_MOD_TARJE_ERP' and trpg.estado_reg = 'activo' and tur.id_usuario = p_id_usuario
             )
 
             SELECT TO_JSON(ROW_TO_JSON(jsonData) :: TEXT) #>> '{}' as json
@@ -240,7 +247,16 @@ BEGIN
                                       SELECT *
                                       FROM t_formas_pago_erp
                                   ) formas_pago_erp_tarjeta
-                         ) AS formas_pago_erp_tarjeta
+                         ) AS formas_pago_erp_tarjeta,
+
+                         /*Permisos del ERP*/
+                          (
+                             SELECT TO_JSON(permiso_modificacion)
+                             FROM (
+                                      SELECT *
+                                      FROM t_permiso_transaccion
+                                  ) permiso_modificacion
+                         ) AS permiso_modificacion
 
                  ) jsonData;
 

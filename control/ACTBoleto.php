@@ -118,14 +118,49 @@ class ACTBoleto extends ACTbase{
         }
 
         /********************************************************************/
-        if($data_json != null) {
 
+        /*Recuperar el Codigo de Comercio para la Conciliacion*/
+        $consiliacion = $data_json[0]['concilliation'];
+        $recuperar_codigo_comercio = count($data_json[0]['concilliation']);
+
+        $codigo_comercio_erp = array();
+
+        for ($i=0; $i < $formas_pago_code; $i++) {
+
+            if ($data_json[0]['concilliation'][$i]) {
+
+              $nro_comercio = $data_json[0]['concilliation'][$i]['TerminalNumber'];
+
+              $this->objParam->addParametro('nro_comercio',$nro_comercio);
+
+              $this->objFunc=$this->create('MODBoleto');
+              $this->resData=$this->objFunc->recuperarNombreEstablecimiento($this->objParam);
+
+              if($this->resData->getTipo()!='EXITO'){
+
+                  $this->resData->imprimirRespuesta($this->resData->generarJson());
+                  exit;
+              }
+
+              $resultado = $this->resData->getDatos();
+
+              //var_dump("aqi llega el dato",$resultado);
+
+              $establecimiento = ($resultado['establecimiento']);
+              //var_dump("aqui resultado",$establecimiento);
+              $data_json[0]['concilliation'][$i] += ["NameComercio"=>$establecimiento];
+            }
+        }
+        /******************************************************/
+
+        if($data_json != null) {
             $send = array(
                 "nro_ticket" =>  $nro_ticket,
                 "data" =>  $data_json,
                 "data_erp" =>  json_decode($datosErp['mensaje']),
                 "forma_pago_tarjeta" => $forma_pago_cc,
                 "forma_pago_tarjeta_code" => $forma_pago_cc_code,
+                "nombre_comercio_erp"=>$codigo_comercio_erp
             );
 
             echo json_encode($send);
@@ -723,7 +758,50 @@ class ACTBoleto extends ACTbase{
     /****************************************/
   }
 
+  function GetTicketData(){
 
+    $data = array("pnr"=>$this->objParam->getParametro('pnr'),
+                  "issueDate"=>$this->objParam->getParametro('issueDate'),
+                  "nroTarjeta"=>$this->objParam->getParametro('nroTarjeta'),
+                  "codAutorizacion"=>$this->objParam->getParametro('codAutorizacion'),
+                  "tyCons"=>$this->objParam->getParametro('tyCons'),
+                );
+    $datosUpdate = json_encode($data);
+
+    $envio_dato = $datosUpdate;
+    //var_dump("aqui llega la respuesta",$envio_dato);
+    $request =  'http://sms.obairlines.bo/CommissionServices/ServiceComision.svc/GetTicketData';
+    $session = curl_init($request);
+    curl_setopt($session, CURLOPT_CUSTOMREQUEST, "POST");
+    curl_setopt($session, CURLOPT_POSTFIELDS, $envio_dato);
+    curl_setopt($session, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($session, CURLOPT_HTTPHEADER, array(
+            'Content-Type: application/json',
+            'Content-Length: ' . strlen($envio_dato))
+    );
+
+    $result = curl_exec($session);
+    curl_close($session);
+
+
+
+    $respuesta = json_decode($result);
+
+
+    $respuesta_final = json_decode($respuesta->GetTicketDataResult);
+
+    $respuesta_estado_servicio = $respuesta_final->State;
+
+    if ($respuesta_estado_servicio == true) {
+      $respuesta_base_datos = $respuesta_final->Data;
+      $respuesta_envio = json_encode($respuesta_base_datos);
+      echo $respuesta_envio;
+    }
+
+
+
+
+  }
 }
 
 ?>

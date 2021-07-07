@@ -405,7 +405,7 @@ BEGIN
                                   p_id_usuario,--8
                                   v_parametros.forma_pago_1::integer,--9
                                   1,--10
-                                  'si'--11
+                                  'no'--11
                                   );
 
 
@@ -464,7 +464,7 @@ BEGIN
                                   p_id_usuario,--8
                                   v_parametros.forma_pago_2::integer,--9
                                   1,--10
-                                  'si'--11
+                                  'no'--11
                                   );
                     end if;
                    end if;
@@ -487,7 +487,7 @@ BEGIN
                         codigo_tarjeta = trim(v_parametros.cod_tarjeta_1),
                         id_usuario_mod = p_id_usuario,
                         fecha_mod = now(),
-                        modificado = 'si'
+                        modificado = 'no'
                         where id_boleto_amadeus_forma_pago = v_id_forma_pago_amadeus;
 
 
@@ -509,7 +509,7 @@ BEGIN
                                   codigo_tarjeta = trim(v_parametros.cod_tarjeta_2),
                                   id_usuario_mod = p_id_usuario,
                                   fecha_mod = now(),
-                                  modificado = 'si'
+                                  modificado = 'no'
                                   where id_boleto_amadeus_forma_pago = v_id_forma_pago_amadeus_2 and
                                   id_boleto_amadeus_forma_pago not in (v_id_forma_pago_amadeus);
 

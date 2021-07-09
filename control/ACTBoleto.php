@@ -105,18 +105,18 @@ class ACTBoleto extends ACTbase{
               array_push($forma_pago_cc, $data_json[0]['payment'][$i]);
             }
         }
+        /********************************************************************/
 
+        /*Aqui aumentando para que recuperemos solo la forma de pago tarjeta desde las modificaciones de STAGE*/
+        $formas_pago_modificadas = count($data_json[0]['accountingPayment']);
 
-        $formas_pago_code = count($data_json[0]['concilliation']);
+        $forma_pago_cc_modificadas_stage = array();
 
-        $forma_pago_cc_code = array();
-
-        for ($i=0; $i < $formas_pago_code; $i++) {
-            if ($data_json[0]['concilliation'][$i]) {
-              array_push($forma_pago_cc_code, $data_json[0]['concilliation'][$i]);
+        for ($i=0; $i < $formas_pago_modificadas; $i++) {
+            if ($data_json[0]['accountingPayment'][$i]['payCode'] == 'CC' && $data_json[0]['accountingPayment'][$i]['payAmount'] > 0) {
+              array_push($forma_pago_cc_modificadas_stage, $data_json[0]['accountingPayment'][$i]);
             }
         }
-
         /********************************************************************/
 
         /*Recuperar el Codigo de Comercio para la Conciliacion*/
@@ -159,8 +159,8 @@ class ACTBoleto extends ACTbase{
                 "data" =>  $data_json,
                 "data_erp" =>  json_decode($datosErp['mensaje']),
                 "forma_pago_tarjeta" => $forma_pago_cc,
-                "forma_pago_tarjeta_code" => $forma_pago_cc_code,
-                "nombre_comercio_erp"=>$codigo_comercio_erp
+                "nombre_comercio_erp"=>$codigo_comercio_erp,
+                "forma_pago_modificadas_stage"=>$forma_pago_cc_modificadas_stage
             );
 
             echo json_encode($send);
@@ -454,8 +454,6 @@ class ACTBoleto extends ACTbase{
         exit;
       }
 
-
-
         /*Incluyenco la modificacion en el STAGE*/
         $data = array("ticketNumber"=>$this->objParam->getParametro('boleto_a_modificar'),
                       "nroTarjeta"=>$this->objParam->getParametro('num_tarjeta_1'),
@@ -627,6 +625,7 @@ class ACTBoleto extends ACTbase{
                     "nroTarjeta"=>$this->objParam->getParametro('num_tarjeta_1'),
                     "codAutorizacion"=>$this->objParam->getParametro('cod_tarjeta_1'),
                     "issueDate"=>$this->objParam->getParametro('issueDate'));
+
       $datosUpdate = json_encode($data);
 
       $envio_dato = $datosUpdate;

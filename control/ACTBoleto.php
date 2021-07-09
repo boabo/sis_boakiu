@@ -125,7 +125,7 @@ class ACTBoleto extends ACTbase{
 
         $codigo_comercio_erp = array();
 
-        for ($i=0; $i < $formas_pago_code; $i++) {
+        for ($i=0; $i < $recuperar_codigo_comercio; $i++) {
 
             if ($data_json[0]['concilliation'][$i]) {
 

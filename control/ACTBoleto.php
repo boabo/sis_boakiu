@@ -127,9 +127,30 @@ class ACTBoleto extends ACTbase{
 
         for ($i=0; $i < $recuperar_codigo_comercio; $i++) {
 
-            if ($data_json[0]['concilliation'][$i]) {
+            if ($data_json[0]['concilliation'][$i] && ($data_json[0]['concilliation'][$i]['Formato'] == 'LINKSER')) {
 
               $nro_comercio = $data_json[0]['concilliation'][$i]['TerminalNumber'];
+
+              $this->objParam->addParametro('nro_comercio',$nro_comercio);
+
+              $this->objFunc=$this->create('MODBoleto');
+              $this->resData=$this->objFunc->recuperarNombreEstablecimiento($this->objParam);
+
+              if($this->resData->getTipo()!='EXITO'){
+
+                  $this->resData->imprimirRespuesta($this->resData->generarJson());
+                  exit;
+              }
+
+              $resultado = $this->resData->getDatos();
+
+              //var_dump("aqi llega el dato",$resultado);
+
+              $establecimiento = ($resultado['establecimiento']);
+              //var_dump("aqui resultado",$establecimiento);
+              $data_json[0]['concilliation'][$i] += ["NameComercio"=>$establecimiento];
+            } elseif ($data_json[0]['concilliation'][$i] && ($data_json[0]['concilliation'][$i]['Formato'] == 'ATC')) {
+              $nro_comercio = $data_json[0]['concilliation'][$i]['EstablishmentCode'];
 
               $this->objParam->addParametro('nro_comercio',$nro_comercio);
 

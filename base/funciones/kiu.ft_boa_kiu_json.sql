@@ -157,10 +157,10 @@ BEGIN
             ),t_factura_libro_ventas as (
 
                 SELECT * FROM dblink(v_cadena_cnx,
-                                     'select fac.nro_factura, fac.fecha_factura, fac.nro_autorizacion, fac.estado, fac.importe_otros_no_suj_iva, fac.importe_total_venta
+                                     'select fac.nro_factura, fac.fecha_factura, fac.nro_autorizacion, fac.estado, fac.importe_otros_no_suj_iva, fac.importe_total_venta, nit_ci_cli, razon_social_cli
                                       From sfe.tfactura fac
                                       where  fac.nro_factura='''||trim(v_parametros.nro_ticket)||''' '
-                                  ) AS d (nro_factura varchar, fecha_factura date, nro_autorizacion varchar, estado varchar, importe_otros_no_suj_iva numeric, importe_total_venta numeric)
+                                  ) AS d (nro_factura varchar, fecha_factura date, nro_autorizacion varchar, estado varchar, importe_otros_no_suj_iva numeric, importe_total_venta numeric, nit_ci_cli varchar, razon_social_cli varchar)
 
 
             ),t_datos_emision as

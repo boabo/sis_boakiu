@@ -75,7 +75,23 @@ DECLARE
     nro_tarjeta_2_old varchar;
     nro_autorizacion_2_old varchar;
     v_responsable	varchar;
-        v_establecimiento	varchar;
+    v_establecimiento	varchar;
+
+    /*Variables para recorrer el Array de las N formas de Pago*/
+    v_id_moneda	varchar[];
+    v_id_forma_pago varchar[];
+    v_num_tarjeta varchar[];
+    v_cod_tarjeta varchar[];
+    v_mco varchar[];
+    v_id_auxiliar varchar[];
+    v_id_auxiliar_anticipo varchar[];
+    v_id_venta varchar[];
+    v_monto_fp varchar[];
+
+
+    v_name_mp	varchar;
+    v_codigo_moneda	varchar;
+
 BEGIN
 
     v_nombre_funcion = 'kiu.ft_boa_kiu_json';
@@ -204,7 +220,40 @@ BEGIN
                          INNER JOIN segu.tprocedimiento tp on tp.id_procedimiento = tpg.id_procedimiento
                          INNER JOIN segu.tusuario_rol tur on tur.id_rol = trpg.id_rol
                 where tp.codigo = 'KIU_MOD_TARJE_ERP' and trpg.estado_reg = 'activo' and tur.id_usuario = p_id_usuario
-            )
+            ), t_nota_debito_credito as (
+            	WITH t_liqui as (
+                                  SELECT tl.*,
+                                         vp.nombre_completo2 as elaborado_por
+                                  FROM decr.tliquidacion tl
+                                           inner JOIN decr.tliqui_boleto tlb on tlb.id_liquidacion = tl.id_liquidacion
+                                           inner join segu.tusuario tu on tu.id_usuario = tl.id_usuario_reg
+                                           INNER JOIN segu.vpersona2 vp on vp.id_persona = tu.id_persona
+                                  where trim(tlb.data_stage->>'ticketNumber') = trim(v_parametros.nro_ticket) -- aca cambiara el ticket number
+                              ),t_nota AS (
+                                       SELECT nota.*
+                                       FROM decr.tnota nota
+                                       inner join t_liqui tl on tl.id_liquidacion::integer = nota.id_liquidacion::integer
+                              ), t_factura_pagada AS (
+                                  SELECT tv.nro_factura, tl.id_proceso_wf_factura, tv.fecha, tv.total_venta
+                                  FROM vef.tventa tv
+                                  inner join t_liqui tl on tl.id_proceso_wf_factura::integer = tv.id_proceso_wf::integer
+                              ) SELECT tl.id_liquidacion,
+                                       tl.nro_liquidacion,
+                                       tl.id_proceso_wf_factura,
+                                       tl.fecha_liqui,
+                                       tl.importe_total,
+                                       tl.elaborado_por,
+                                       tn.nro_nota,
+                                       tn.fecha as fecha_nota,
+                                       tn.total_devuelto as importe_nota,
+                                       tfp.nro_factura as nro_factura_pagada,
+                                       tfp.fecha as fecha_factura_pagada,
+                                       tfp.total_venta as total_venta_pagada
+
+                              from t_liqui tl
+                              LEFT JOIN t_nota tn on tn.id_liquidacion::integer = tl.id_liquidacion::integer
+                              LEFT JOIN t_factura_pagada tfp on tfp.id_proceso_wf_factura = tl.id_proceso_wf_factura
+			)
 
             SELECT TO_JSON(ROW_TO_JSON(jsonData) :: TEXT) #>> '{}' as json
             into v_json
@@ -257,7 +306,15 @@ BEGIN
                                       SELECT *
                                       FROM t_permiso_transaccion
                                   ) permiso_modificacion
-                         ) AS permiso_modificacion
+                         ) AS permiso_modificacion,
+
+                         (
+                             SELECT ARRAY_TO_JSON(ARRAY_AGG(ROW_TO_JSON(nota_debito_credito)))
+                             FROM (
+                                      SELECT *
+                                      FROM t_nota_debito_credito
+                                  ) nota_debito_credito
+                         ) AS nota_debito_credito
 
                  ) jsonData;
 
@@ -633,6 +690,52 @@ BEGIN
 
             end;
 
+	/*********************************
+        #TRANSACCION:  'KIU_MOD_MP_IME'
+        #DESCRIPCION:	Modificar Medios de Pago de un Boleto
+        #AUTOR:		Ismael Valdivia
+        #FECHA:		20-07-2021 11:30:00
+        ***********************************/
+
+        elsif(p_transaccion='KIU_MOD_MP_IME')then
+
+            begin
+
+            	v_id_moneda = string_to_array(Replace(Replace(Replace(v_parametros.id_moneda :: JSON ->> 'id_moneda', '"',''),'[',''),']',''),',');
+                v_id_forma_pago = string_to_array(Replace(Replace(Replace(v_parametros.id_forma_pago :: JSON ->> 'id_forma_pago', '"',''),'[',''),']',''),',');
+                v_num_tarjeta = string_to_array(Replace(Replace(Replace(v_parametros.num_tarjeta :: JSON ->> 'num_tarjeta', '"',''),'[',''),']',''),',');
+                v_cod_tarjeta = string_to_array(Replace(Replace(Replace(v_parametros.cod_tarjeta :: JSON ->> 'cod_tarjeta', '"',''),'[',''),']',''),',');
+                v_mco = string_to_array(Replace(Replace(Replace(v_parametros.mco :: JSON ->> 'mco', '"',''),'[',''),']',''),',');
+                v_id_auxiliar = string_to_array(Replace(Replace(Replace(v_parametros.id_auxiliar :: JSON ->> 'id_auxiliar', '"',''),'[',''),']',''),',');
+                v_id_auxiliar_anticipo = string_to_array(Replace(Replace(Replace(v_parametros.id_auxiliar_anticipo :: JSON ->> 'id_auxiliar_anticipo', '"',''),'[',''),']',''),',');
+                v_id_venta = string_to_array(Replace(Replace(Replace(v_parametros.id_venta :: JSON ->> 'id_venta', '"',''),'[',''),']',''),',');
+                v_monto_fp = string_to_array(Replace(Replace(Replace(v_parametros.monto_fp :: JSON ->> 'monto_fp', '"',''),'[',''),']',''),',');
+
+
+            	for i in 1..(v_parametros.cantidad_fp) loop
+
+                	select mon.codigo_internacional into v_codigo_moneda
+                    from param.tmoneda mon
+                    where mon.id_moneda = v_id_moneda[i]::integer;
+
+                    SELECT mp.name into v_name_mp
+                    from obingresos.tmedio_pago_pw mp
+                    where mp.id_medio_pago_pw = v_id_forma_pago[i]::integer;
+
+                    raise notice 'Aqui llega la informacion %, %',v_codigo_moneda,v_name_mp;
+
+                end loop;
+
+               -- raise exception 'Aqui llega la respuesta %',v_parametros.cantidad_fp;
+
+                 --Definicion de la respuesta
+                  --v_resp = pxp.f_agrega_clave(v_resp,'mensaje',v_establecimiento);
+                  --v_resp = pxp.f_agrega_clave(v_resp,'establecimiento',v_establecimiento);
+
+                  --Devuelve la respuesta
+                  --return v_resp;
+
+            end;
 
     else
 

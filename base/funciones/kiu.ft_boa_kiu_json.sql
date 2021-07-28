@@ -93,6 +93,8 @@ DECLARE
     v_codigo_moneda	varchar;
     v_id_usuario_reg	integer;
     v_fecha_reg	 	TIMESTAMP;
+    v_id_moneda_fp_1	integer;
+    v_id_moneda_fp_2	integer;
 
 BEGIN
 
@@ -406,6 +408,20 @@ BEGIN
             from obingresos.tboleto_amadeus ama
             where trim(ama.nro_boleto) = trim(v_parametros.boleto_a_modificar);
 
+            /*Recuperamos la moneda para la actualizacion*/
+            select fp.id_moneda into v_id_moneda_fp_1
+            from obingresos.tboleto_amadeus_forma_pago fp
+            where trim(fp.codigo_tarjeta) = trim(v_parametros.nro_autorizacion_1_old) and trim(fp.numero_tarjeta) = trim(v_parametros.nro_tarjeta_1_old)
+            and fp.id_boleto_amadeus = v_id_boleto_amadeus;
+            /*********************************************/
+
+            /*Recuperamos la moneda para la actualizacion*/
+            select fp.id_moneda into v_id_moneda_fp_2
+            from obingresos.tboleto_amadeus_forma_pago fp
+            where trim(fp.codigo_tarjeta) = trim(v_parametros.nro_autorizacion_2_old) and trim(fp.numero_tarjeta) = trim(v_parametros.nro_tarjeta_2_old)
+            and fp.id_boleto_amadeus = v_id_boleto_amadeus;
+            /*********************************************/
+
 			/*Eliminamos las formas de pago en Tarjeta*/
             delete from obingresos.tboleto_amadeus_forma_pago
             where id_boleto_amadeus = v_id_boleto_amadeus
@@ -417,7 +433,6 @@ BEGIN
                 v_code_mp
             from obingresos.tmedio_pago_pw mp
             where mp.id_medio_pago_pw = v_parametros.forma_pago_1::integer;
-
 
 
             /*Validacion de la tarjeta*/
@@ -468,7 +483,7 @@ BEGIN
                       trim(v_parametros.cod_tarjeta_1),--7
                       p_id_usuario,--8
                       v_parametros.forma_pago_1::integer,--9
-                      1,--10
+                      v_id_moneda_fp_1,--10
                       'no'--11
                   );
             /*Aqui Insertamos la segunda Tarjeta*/
@@ -528,7 +543,7 @@ BEGIN
                               trim(v_parametros.cod_tarjeta_2),--7
                               p_id_usuario,--8
                               v_parametros.forma_pago_2::integer,--9
-                              1,--10
+                              v_id_moneda_fp_2,--10
                               'no'--11
                           );
                 end if;

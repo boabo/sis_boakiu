@@ -66,11 +66,17 @@ class MODBoleto extends MODbase{
       $this->setParametro('num_tarjeta_1','num_tarjeta_1','varchar');
       $this->setParametro('cod_tarjeta_1','cod_tarjeta_1','varchar');
       $this->setParametro('monto_fp_1','monto_fp_1','numeric');
+      $this->setParametro('nro_tarjeta_1_old','nro_tarjeta_1_old','varchar');
+      $this->setParametro('nro_autorizacion_1_old','nro_autorizacion_1_old','varchar');
 
       $this->setParametro('forma_pago_2','forma_pago_2','integer');
       $this->setParametro('num_tarjeta_2','num_tarjeta_2','varchar');
       $this->setParametro('cod_tarjeta_2','cod_tarjeta_2','varchar');
       $this->setParametro('monto_fp_2','monto_fp_2','numeric');
+      $this->setParametro('nro_tarjeta_2_old','nro_tarjeta_2_old','varchar');
+      $this->setParametro('nro_autorizacion_2_old','nro_autorizacion_2_old','varchar');
+
+
 
   		//Ejecuta la instruccion
   		$this->armarConsulta();

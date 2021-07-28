@@ -479,7 +479,10 @@ class ACTBoleto extends ACTbase{
         $data = array("ticketNumber"=>$this->objParam->getParametro('boleto_a_modificar'),
                       "nroTarjeta"=>$this->objParam->getParametro('num_tarjeta_1'),
                       "codAutorizacion"=>$this->objParam->getParametro('cod_tarjeta_1'),
-                      "issueDate"=>$this->objParam->getParametro('issueDate')
+                      "issueDate"=>$this->objParam->getParametro('issueDate'),
+                      /*Aumentando para mandar nuevos campos*/
+                      "nroTarjeta_ant"=>$this->objParam->getParametro('nro_tarjeta_1_old'),
+                      "codAutorizacion_ant"=>$this->objParam->getParametro('nro_autorizacion_1_old')
                     );
         $datosUpdate = json_encode($data);
 
@@ -537,7 +540,11 @@ class ACTBoleto extends ACTbase{
           $data2 = array("ticketNumber"=>$this->objParam->getParametro('boleto_a_modificar'),
                         "nroTarjeta"=>$this->objParam->getParametro('num_tarjeta_2'),
                         "codAutorizacion"=>$this->objParam->getParametro('cod_tarjeta_2'),
-                        "issueDate"=>$this->objParam->getParametro('issueDate'));
+                        "issueDate"=>$this->objParam->getParametro('issueDate'),
+                        /*Aumentando para mandar nuevos campos*/
+                        "nroTarjeta_ant"=>$this->objParam->getParametro('nro_tarjeta_2_old'),
+                        "codAutorizacion_ant"=>$this->objParam->getParametro('nro_autorizacion_2_old')
+                      );
           $datosUpdate2 = json_encode($data2);
 
           $envio_dato2 = $datosUpdate2;
@@ -645,7 +652,11 @@ class ACTBoleto extends ACTbase{
       $data = array("ticketNumber"=>$this->objParam->getParametro('boleto_a_modificar'),
                     "nroTarjeta"=>$this->objParam->getParametro('num_tarjeta_1'),
                     "codAutorizacion"=>$this->objParam->getParametro('cod_tarjeta_1'),
-                    "issueDate"=>$this->objParam->getParametro('issueDate'));
+                    "issueDate"=>$this->objParam->getParametro('issueDate'),
+                    /*Aumentando para mandar nuevos campos*/
+                    "nroTarjeta_ant"=>$this->objParam->getParametro('nro_tarjeta_1_old'),
+                    "codAutorizacion_ant"=>$this->objParam->getParametro('nro_autorizacion_1_old')
+                  );
 
       $datosUpdate = json_encode($data);
 
@@ -699,7 +710,11 @@ class ACTBoleto extends ACTbase{
         $data2 = array("ticketNumber"=>$this->objParam->getParametro('boleto_a_modificar'),
                       "nroTarjeta"=>$this->objParam->getParametro('num_tarjeta_2'),
                       "codAutorizacion"=>$this->objParam->getParametro('cod_tarjeta_2'),
-                      "issueDate"=>$this->objParam->getParametro('issueDate'));
+                      "issueDate"=>$this->objParam->getParametro('issueDate'),
+                      /*Aumentando para mandar nuevos campos*/
+                      "nroTarjeta_ant"=>$this->objParam->getParametro('nro_tarjeta_2_old'),
+                      "codAutorizacion_ant"=>$this->objParam->getParametro('nro_autorizacion_2_old')
+                    );
         $datosUpdate2 = json_encode($data2);
 
         $envio_dato2 = $datosUpdate2;

@@ -91,6 +91,8 @@ DECLARE
 
     v_name_mp	varchar;
     v_codigo_moneda	varchar;
+    v_id_usuario_reg	integer;
+    v_fecha_reg	 	TIMESTAMP;
 
 BEGIN
 
@@ -394,15 +396,145 @@ BEGIN
         begin
 
 
-            select ama.id_boleto_amadeus
+            select ama.id_boleto_amadeus,
+            	   ama.id_usuario_reg,
+                   ama.fecha_reg
             into
-                v_id_boleto_amadeus
+                v_id_boleto_amadeus,
+                v_id_usuario_reg,
+                v_fecha_reg
             from obingresos.tboleto_amadeus ama
             where trim(ama.nro_boleto) = trim(v_parametros.boleto_a_modificar);
 
+			/*Eliminamos las formas de pago en Tarjeta*/
+            delete from obingresos.tboleto_amadeus_forma_pago
+            where id_boleto_amadeus = v_id_boleto_amadeus
+            and (numero_tarjeta != '' and numero_tarjeta is not null);
+            /******************************************/
+
+            select mp.mop_code
+            into
+                v_code_mp
+            from obingresos.tmedio_pago_pw mp
+            where mp.id_medio_pago_pw = v_parametros.forma_pago_1::integer;
 
 
-            select count (fp.id_boleto_amadeus_forma_pago)
+
+            /*Validacion de la tarjeta*/
+            select mp.mop_code, fp.fop_code into v_codigo_tarjeta, v_codigo_fp
+            from obingresos.tmedio_pago_pw mp
+                     inner join obingresos.tforma_pago_pw fp on fp.id_forma_pago_pw = mp.forma_pago_id
+            where mp.id_medio_pago_pw = v_parametros.forma_pago_1::integer;
+
+
+            v_codigo_tarjeta = (case when v_codigo_tarjeta is not null then
+                                         v_codigo_tarjeta
+                                     else
+                                         NULL
+                end);
+
+            if (v_codigo_tarjeta is not null and v_codigo_fp = 'CC') then
+                if (substring(v_parametros.num_tarjeta_1::varchar from 1 for 1) != 'X') then
+                    v_res = pxp.f_valida_numero_tarjeta_credito(trim(v_parametros.num_tarjeta_1::varchar),v_codigo_tarjeta);
+                end if;
+            end if;
+            /*********************************************************************/
+
+            /*Insertamos el Registro de la targeta*/
+            INSERT INTO obingresos.tboleto_amadeus_forma_pago
+            (id_usuario_reg,--1
+             fecha_reg,
+             id_usuario_mod,
+             fecha_mod,
+             id_boleto_amadeus,  --2
+             importe,--3
+             tarjeta,--5
+             numero_tarjeta,--6
+             codigo_tarjeta,--7
+             id_usuario_fp_corregido,--8
+             id_medio_pago,--9
+             id_moneda,--10
+             modificado--11
+            )
+            VALUES(
+                      v_id_usuario_reg,--1
+                      v_fecha_reg,
+                      p_id_usuario,
+                      now(),
+                      v_id_boleto_amadeus,--2
+                      v_parametros.monto_fp_1::numeric,--3
+                      v_code_mp,--5
+                      trim(v_parametros.num_tarjeta_1),--6
+                      trim(v_parametros.cod_tarjeta_1),--7
+                      p_id_usuario,--8
+                      v_parametros.forma_pago_1::integer,--9
+                      1,--10
+                      'no'--11
+                  );
+            /*Aqui Insertamos la segunda Tarjeta*/
+            IF  pxp.f_existe_parametro(p_tabla,'forma_pago_2') THEN
+                if (v_parametros.forma_pago_2::integer is not null) then
+
+                    select mp.mop_code
+                    into
+                        v_code_mp_2
+                    from obingresos.tmedio_pago_pw mp
+                    where mp.id_medio_pago_pw = v_parametros.forma_pago_2::integer;
+
+                    /*Validacion de la tarjeta*/
+                    select mp.mop_code, fp.fop_code into v_codigo_tarjeta2, v_codigo_fp2
+                    from obingresos.tmedio_pago_pw mp
+                             inner join obingresos.tforma_pago_pw fp on fp.id_forma_pago_pw = mp.forma_pago_id
+                    where mp.id_medio_pago_pw = v_parametros.forma_pago_2::integer;
+
+
+                    v_codigo_tarjeta2 = (case when v_codigo_tarjeta2 is not null then
+                                                  v_codigo_tarjeta2
+                                              else
+                                                  NULL
+                        end);
+
+                    if (v_codigo_tarjeta2 is not null and v_codigo_fp2 = 'CC') then
+                        if (substring(v_parametros.num_tarjeta_2::varchar from 1 for 1) != 'X') then
+                            v_res2 = pxp.f_valida_numero_tarjeta_credito(trim(v_parametros.num_tarjeta_2::varchar),v_codigo_tarjeta2);
+                        end if;
+                    end if;
+                    /*********************************************************************/
+
+                    INSERT INTO obingresos.tboleto_amadeus_forma_pago
+                    (id_usuario_reg,--1
+                     fecha_reg,
+                     id_usuario_mod,
+                     fecha_mod,
+                     id_boleto_amadeus,  --2
+                     importe,--3
+                     tarjeta,--5
+                     numero_tarjeta,--6
+                     codigo_tarjeta,--7
+                     id_usuario_fp_corregido,--8
+                     id_medio_pago,--9
+                     id_moneda,--10
+                     modificado--11
+                    )
+                    VALUES(
+                              v_id_usuario_reg,--1
+                              v_fecha_reg,
+                              p_id_usuario,
+                              now(),
+                              v_id_boleto_amadeus,--2
+                              v_parametros.monto_fp_2::numeric,--3
+                              v_code_mp_2,--5
+                              trim(v_parametros.num_tarjeta_2),--6
+                              trim(v_parametros.cod_tarjeta_2),--7
+                              p_id_usuario,--8
+                              v_parametros.forma_pago_2::integer,--9
+                              1,--10
+                              'no'--11
+                          );
+                end if;
+            end if;
+
+           /* select count (fp.id_boleto_amadeus_forma_pago)
             into
                 v_contador_id_forma_pago_amadeus
             from obingresos.tboleto_amadeus_forma_pago fp
@@ -577,7 +709,7 @@ BEGIN
 
 
 
-            end if;
+            end if;*/
 
 
 

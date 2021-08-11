@@ -837,6 +837,120 @@ class ACTBoleto extends ACTbase{
 
 
   }
+
+  function getConcilliation() {
+
+    $nro_ticket = $this->objParam->getParametro('nro_ticket');
+
+    if ($nro_ticket != '' && $nro_ticket != null) {
+      $array = array();
+      $curl = curl_init();
+      //var_dump("aqui llega el json devuelto",$nro_ticket);exit;
+      curl_setopt_array($curl, array(
+          CURLOPT_URL => $_SESSION['_PXP_ND_URL'].'/api/boa-stage-nd/Ticket/getConciliation',
+          CURLOPT_RETURNTRANSFER => true,
+          CURLOPT_ENCODING => '',
+          CURLOPT_MAXREDIRS => 10,
+          CURLOPT_TIMEOUT => 0,
+          CURLOPT_FOLLOWLOCATION => true,
+          CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+          CURLOPT_CUSTOMREQUEST => 'POST',
+          CURLOPT_POSTFIELDS =>'{
+              "ticketNumber": '.$nro_ticket.',
+              "recursive": false
+          }
+          ',
+          CURLOPT_HTTPHEADER => array(
+              'Authorization: ' . $_SESSION['_PXP_ND_TOKEN'],
+              'Content-Type: application/json'
+          ),
+      ));
+
+      $response = curl_exec($curl);
+
+
+      curl_close($curl);
+
+      $data_json = json_decode(preg_replace('/[\x00-\x1F\x80-\xFF]/', '', $response), true);
+
+
+      /*Recuperar el Codigo de Comercio para la Conciliacion*/
+      $consiliacion = $data_json;
+      $recuperar_codigo_comercio = count($data_json);
+
+      $codigo_comercio_erp = array();
+
+      for ($i=0; $i < $recuperar_codigo_comercio; $i++) {
+
+          if ($data_json[$i] && ($data_json[$i]['Formato'] == 'LINKSER')) {
+
+            $nro_comercio = $data_json[$i]['TerminalNumber'];
+
+            $this->objParam->addParametro('nro_comercio',$nro_comercio);
+
+            $this->objFunc=$this->create('MODBoleto');
+            $this->resData=$this->objFunc->recuperarNombreEstablecimiento($this->objParam);
+
+            if($this->resData->getTipo()!='EXITO'){
+
+                $this->resData->imprimirRespuesta($this->resData->generarJson());
+                exit;
+            }
+
+            $resultado = $this->resData->getDatos();
+
+            //var_dump("aqi llega el dato",$resultado);
+
+            $establecimiento = ($resultado['establecimiento']);
+            //var_dump("aqui resultado",$establecimiento);
+            $data_json[$i] += ["NameComercio"=>$establecimiento];
+          } elseif ($data_json[$i] && ($data_json[$i]['Formato'] == 'ATC')) {
+            $nro_comercio = $data_json[$i]['EstablishmentCode'];
+
+            $this->objParam->addParametro('nro_comercio',$nro_comercio);
+
+            $this->objFunc=$this->create('MODBoleto');
+            $this->resData=$this->objFunc->recuperarNombreEstablecimiento($this->objParam);
+
+            if($this->resData->getTipo()!='EXITO'){
+
+                $this->resData->imprimirRespuesta($this->resData->generarJson());
+                exit;
+            }
+
+            $resultado = $this->resData->getDatos();
+
+            //var_dump("aqi llega el dato",$resultado);
+
+            $establecimiento = ($resultado['establecimiento']);
+            //var_dump("aqui resultado",$establecimiento);
+            $data_json[$i] += ["NameComercio"=>$establecimiento];
+          }
+      }
+      /******************************************************/
+
+      if($data_json != null) {
+          $send = array(
+              "conciliacion_oficial" =>  $data_json
+          );
+
+          echo json_encode($send);
+      } else {
+          $send = array(
+              "conciliacion_oficial" => null
+          );
+          echo json_encode($send);
+
+      }
+    } else {
+      $send = array(
+          "conciliacion_oficial" => null
+      );
+      echo json_encode($send);
+    }
+
+
+  }
 }
 
 ?>

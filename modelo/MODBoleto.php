@@ -62,6 +62,7 @@ class MODBoleto extends MODbase{
   		$this->tipo_procedimiento='IME';
 
       $this->setParametro('boleto_a_modificar','boleto_a_modificar','varchar');
+      $this->setParametro('fecha_emision','fecha_emision','date');
       $this->setParametro('forma_pago_1','forma_pago_1','integer');
       $this->setParametro('num_tarjeta_1','num_tarjeta_1','varchar');
       $this->setParametro('cod_tarjeta_1','cod_tarjeta_1','varchar');

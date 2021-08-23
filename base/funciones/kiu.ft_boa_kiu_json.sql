@@ -78,7 +78,7 @@ DECLARE
     v_establecimiento	varchar;
 
     /*Variables para recorrer el Array de las N formas de Pago*/
-    v_id_moneda	varchar[];
+    v_id_moneda	integer;
     v_id_forma_pago varchar[];
     v_num_tarjeta varchar[];
     v_cod_tarjeta varchar[];
@@ -86,7 +86,7 @@ DECLARE
     v_id_auxiliar varchar[];
     v_id_auxiliar_anticipo varchar[];
     v_id_venta varchar[];
-    v_monto_fp varchar[];
+    v_monto_fp numeric;
 
 
     v_name_mp	varchar;
@@ -96,6 +96,39 @@ DECLARE
     v_id_moneda_fp_1	integer;
     v_id_moneda_fp_2	integer;
 
+    v_codigo_tarjeta_control varchar;
+    v_codigo_fp_control		 varchar;
+
+    v_data					 varchar;
+    v_datos_recuperar		varchar;
+    v_record_json_data_detalle json;
+    v_numero_tarjeta		varchar;
+    v_id_boleto_amadeus_el	integer;
+    v_registros				record;
+    v_id_moneda_base		integer;
+    v_id_moneda_venta		integer;
+    v_monto_total_base		numeric;
+    v_fecha_emision			date;
+    v_monto_total_boleto	numeric;
+    v_cantidad_fp			integer;
+    v_acumulado_fp			numeric;
+    v_suma_fp_dolar			numeric;
+    v_suma_fp_bolivianos	numeric;
+    v_suma_total			numeric;
+    v_conversion_dolar		numeric;
+    v_record_recuperado		record;
+
+    v_total_efectivo_local_original numeric;
+    v_total_efectivo_dolar_original numeric;
+
+    v_total_efectivo_dolar_modificado numeric;
+    v_total_efectivo_local_modificado numeric;
+    v_id_punto_venta_emision	integer;
+    v_id_cajero_emision			integer;
+    v_estado_apertura_cierre_caja	varchar;
+    v_nombre_punto_venta		varchar;
+	v_nombre_cajero				varchar;
+    v_mon_recibo				varchar;
 BEGIN
 
     v_nombre_funcion = 'kiu.ft_boa_kiu_json';
@@ -257,7 +290,17 @@ BEGIN
                               from t_liqui tl
                               LEFT JOIN t_nota tn on tn.id_liquidacion::integer = tl.id_liquidacion::integer
                               LEFT JOIN t_factura_pagada tfp on tfp.id_proceso_wf_factura = tl.id_proceso_wf_factura
-			)
+			),t_permiso_transaccion_modificar_formas_pago  as (
+                select count(*) as permiso
+                from segu.trol_procedimiento_gui trpg
+                         INNER JOIN segu.tprocedimiento_gui tpg on tpg.id_procedimiento_gui = trpg.id_procedimiento_gui
+                         INNER JOIN segu.tprocedimiento tp on tp.id_procedimiento = tpg.id_procedimiento
+                         INNER JOIN segu.tusuario_rol tur on tur.id_rol = trpg.id_rol
+                where tp.codigo = 'KIU_MOD_MP_IME' and trpg.estado_reg = 'activo' and tur.id_usuario = p_id_usuario
+            ),t_comision_erp as (
+                select   COALESCE(bolam.comision,0)::numeric as comision
+                from obingresos.tboleto_amadeus bolam
+                where  bolam.nro_boleto = trim(v_parametros.nro_ticket))
 
             SELECT TO_JSON(ROW_TO_JSON(jsonData) :: TEXT) #>> '{}' as json
             into v_json
@@ -318,7 +361,23 @@ BEGIN
                                       SELECT *
                                       FROM t_nota_debito_credito
                                   ) nota_debito_credito
-                         ) AS nota_debito_credito
+                         ) AS nota_debito_credito,
+
+                         (
+                             SELECT TO_JSON(permiso_modificacion_medio_pago)
+                             FROM (
+                                      SELECT *
+                                      FROM t_permiso_transaccion_modificar_formas_pago
+                                  ) permiso_modificacion_medio_pago
+                         ) AS permiso_modificacion_medio_pago,
+
+                         (
+                             SELECT TO_JSON(comision_erp)
+                             FROM (
+                                      SELECT *
+                                      FROM t_comision_erp
+                                  ) comision_erp
+                         ) AS comision_erp
 
                  ) jsonData;
 
@@ -406,7 +465,8 @@ BEGIN
                 v_id_usuario_reg,
                 v_fecha_reg
             from obingresos.tboleto_amadeus ama
-            where trim(ama.nro_boleto) = trim(v_parametros.boleto_a_modificar);
+            where trim(ama.nro_boleto) = trim(v_parametros.boleto_a_modificar)
+            and ama.fecha_emision = v_parametros.fecha_emision;
 
             /*Recuperamos la moneda para la actualizacion*/
             select fp.id_moneda into v_id_moneda_fp_1
@@ -848,39 +908,656 @@ BEGIN
 
             begin
 
-            	v_id_moneda = string_to_array(Replace(Replace(Replace(v_parametros.id_moneda :: JSON ->> 'id_moneda', '"',''),'[',''),']',''),',');
-                v_id_forma_pago = string_to_array(Replace(Replace(Replace(v_parametros.id_forma_pago :: JSON ->> 'id_forma_pago', '"',''),'[',''),']',''),',');
-                v_num_tarjeta = string_to_array(Replace(Replace(Replace(v_parametros.num_tarjeta :: JSON ->> 'num_tarjeta', '"',''),'[',''),']',''),',');
-                v_cod_tarjeta = string_to_array(Replace(Replace(Replace(v_parametros.cod_tarjeta :: JSON ->> 'cod_tarjeta', '"',''),'[',''),']',''),',');
-                v_mco = string_to_array(Replace(Replace(Replace(v_parametros.mco :: JSON ->> 'mco', '"',''),'[',''),']',''),',');
-                v_id_auxiliar = string_to_array(Replace(Replace(Replace(v_parametros.id_auxiliar :: JSON ->> 'id_auxiliar', '"',''),'[',''),']',''),',');
-                v_id_auxiliar_anticipo = string_to_array(Replace(Replace(Replace(v_parametros.id_auxiliar_anticipo :: JSON ->> 'id_auxiliar_anticipo', '"',''),'[',''),']',''),',');
-                v_id_venta = string_to_array(Replace(Replace(Replace(v_parametros.id_venta :: JSON ->> 'id_venta', '"',''),'[',''),']',''),',');
-                v_monto_fp = string_to_array(Replace(Replace(Replace(v_parametros.monto_fp :: JSON ->> 'monto_fp', '"',''),'[',''),']',''),',');
+            	/*Aqui recuperamos el Id del Boleto para Eliminar sus formas de pago Actuales*/
+                select ama.id_boleto_amadeus,
+                	   ama.id_moneda_boleto,
+                       ama.fecha_emision,
+                       (COALESCE(ama.total,0) - COALESCE(ama.comision,0)),
+                       ama.id_punto_venta,
+                       ama.id_usuario_cajero
+                	   into
+                       v_id_boleto_amadeus_el,
+                       v_id_moneda_venta,
+                       v_fecha_emision,
+                       v_monto_total_boleto,
+                       v_id_punto_venta_emision,
+                       v_id_cajero_emision
+                from obingresos.tboleto_amadeus ama
+                where ama.nro_boleto = trim(v_parametros.boleto)
+                and ama.fecha_emision = v_parametros.fecha_boleto::date;
+            	/*****************************************************************************/
+
+                /*Control para no afectar al Cajero*/
+                /*Recuperamos el total Cash en dolar para calcular diferencias*/
+                select COALESCE(sum(fp.importe),0) into v_total_efectivo_dolar_original
+                from obingresos.tboleto_amadeus_forma_pago fp
+                inner join obingresos.tmedio_pago_pw mp on mp.id_medio_pago_pw = fp.id_medio_pago
+                inner join obingresos.tforma_pago_pw fpw on fpw.id_forma_pago_pw = mp.forma_pago_id
+                where fp.id_boleto_amadeus = v_id_boleto_amadeus_el
+                and fpw.name = 'CASH' and fp.id_moneda = 2;
+				/****************************************************************/
+
+				/*Recuperamos el total Cash en moneda local para calcular diferencias*/
+                select COALESCE(sum(fp.importe),0) into v_total_efectivo_local_original
+                from obingresos.tboleto_amadeus_forma_pago fp
+                inner join obingresos.tmedio_pago_pw mp on mp.id_medio_pago_pw = fp.id_medio_pago
+                inner join obingresos.tforma_pago_pw fpw on fpw.id_forma_pago_pw = mp.forma_pago_id
+                where fp.id_boleto_amadeus = v_id_boleto_amadeus_el
+                and fpw.name = 'CASH' and fp.id_moneda = (select mon.id_moneda
+                										  from param.tmoneda mon
+                                                          where mon.tipo_moneda = 'base');
+                /***********************************************************************/
+
+                /*Recuperamos todas las formas de pago CASH de los modificados para ver si hay variacion*/
+                v_total_efectivo_dolar_modificado = 0;
+                v_total_efectivo_local_modificado = 0;
+
+                 for i in 1..(v_parametros.cantidad_fp) loop
+
+                	v_data = 'medio_pago_'||i;
+
+                    v_datos_recuperar = v_parametros.json_data :: JSON ->> v_data;
+
+                    FOR  v_record_json_data_detalle IN (SELECT * FROM json_array_elements(v_datos_recuperar :: JSON))
+
+                    loop
+
+                    SELECT mp.name,
+                           mp.mop_code,
+                           fp.fop_code
+                        into
+                            v_name_mp,
+                            v_codigo_tarjeta_control,
+                            v_codigo_fp_control
+                    from obingresos.tmedio_pago_pw mp
+                    inner join obingresos.tforma_pago_pw fp on fp.id_forma_pago_pw = mp.forma_pago_id
+                    where mp.id_medio_pago_pw = (v_record_json_data_detalle->>'id_medio_pago')::integer;
+
+                    if (v_codigo_tarjeta_control = 'CASH' and ((v_record_json_data_detalle->>'id_moneda')::integer = 2)) then
+                        v_total_efectivo_dolar_modificado = (v_total_efectivo_dolar_modificado + (v_record_json_data_detalle->>'monto_fp')::numeric);
+
+                    elsif (v_codigo_tarjeta_control = 'CASH' and ((v_record_json_data_detalle->>'id_moneda')::integer = 1)) then
+
+                        v_total_efectivo_local_modificado = (v_total_efectivo_local_modificado + (v_record_json_data_detalle->>'monto_fp')::numeric);
+
+
+                    end if;
+
+                    end loop;
+
+
+                end loop;
+                /**********************************************************************/
+
+                /*Verificamos la apertura de caja*/
+                select aper.estado
+                       into
+                       v_estado_apertura_cierre_caja
+                from vef.tapertura_cierre_caja aper
+                where aper.fecha_apertura_cierre = v_fecha_emision::date
+                and aper.id_usuario_cajero = v_id_cajero_emision
+                and aper.id_punto_venta = v_id_punto_venta_emision;
+
+                if (v_estado_apertura_cierre_caja = 'cerrado' and ((v_total_efectivo_local_original - v_total_efectivo_local_modificado) != 0 or (v_total_efectivo_dolar_original - v_total_efectivo_dolar_modificado) != 0) ) then
+
+                select pv.nombre
+                	   into
+                       v_nombre_punto_venta
+                from vef.tpunto_venta pv
+                where pv.id_punto_venta = v_id_punto_venta_emision;
+
+
+                select fun.desc_funcionario1
+                	    into
+                        v_nombre_cajero
+                from segu.vusuario usu
+                inner join orga.vfuncionario fun on fun.id_persona = usu.id_persona
+                where usu.id_usuario = v_id_cajero_emision;
+
+                raise exception 'Favor contactarse con el/la Cajero(a) %, del punto de venta %. para que vuelva aperturar su caja en fecha % ya que se esta afectando en su efectivo',v_nombre_cajero,v_nombre_punto_venta,to_char(v_fecha_emision,'DD/MM/YYYY');
+
+                end if;
+                /***********************************/
+
+                /*Recuperamos todos los medios de pago del boleto a modificar*/
+                for v_record_recuperado in (
+                									select fp.*
+                                                    from obingresos.tboleto_amadeus ama
+                                                    inner join obingresos.tboleto_amadeus_forma_pago fp on fp.id_boleto_amadeus = ama.id_boleto_amadeus
+                                                    where ama.id_boleto_amadeus = v_id_boleto_amadeus_el) LOOP
+
+                insert into obingresos.tlog_modificaciones_medios_pago_completo(
+                                                                        importe,--1
+                                                                        id_medio_pago,--2
+                                                                        id_moneda,--3
+                                                                        numero_tarjeta,--4
+                                                                        codigo_tarjeta,--5
+                                                                        tarjeta,--6
+                                                                        id_auxiliar,--7
+                                                                        mco,--8
+                                                                        id_venta,--9
+                                                                        nro_boleto,--10
+                                                                        fecha_emision,--11
+                                                                        observaciones,--12
+                                                                        id_usuario_reg,--13
+                                                                        fecha_reg,--14
+                                                                        id_usuario_ai,--15
+                                                                        usuario_ai,--16
+                                                                        id_usuario_mod,--17
+                                                                        fecha_mod--18
+                                                                    ) values(
+                                                                        v_record_recuperado.importe,--1
+                                                                        v_record_recuperado.id_medio_pago,--2
+                                                                        v_record_recuperado.id_moneda,--3
+                                                                        v_record_recuperado.numero_tarjeta,--4
+                                                                        v_record_recuperado.codigo_tarjeta,--5
+                                                                        v_record_recuperado.tarjeta,--6
+                                                                        v_record_recuperado.id_auxiliar,--7
+                                                                        v_record_recuperado.mco,--8
+                                                                        v_record_recuperado.id_venta,--9
+                                                                        trim(v_parametros.boleto),--10
+                                                                        v_parametros.fecha_boleto::date,--11
+                                                                        v_parametros.observaciones,--12
+                                                                        p_id_usuario,--13
+                                                                        now(),--14
+                                                                        v_parametros._id_usuario_ai,--15
+                                                                        v_parametros._nombre_usuario_ai,--16
+                                                                        null,--17
+                                                                        null--18
+                                                                    );
+
+
+
+
+                END LOOP;
+                /*************************************************************/
+
+
+                /*Eliminamos los medios de pago del boletos relacionado*/
+                delete from obingresos.tboleto_amadeus_forma_pago
+          		where id_boleto_amadeus = v_id_boleto_amadeus_el;
+                /*******************************************************/
+
 
 
             	for i in 1..(v_parametros.cantidad_fp) loop
 
-                	select mon.codigo_internacional into v_codigo_moneda
-                    from param.tmoneda mon
-                    where mon.id_moneda = v_id_moneda[i]::integer;
+                	v_data = 'medio_pago_'||i;
 
-                    SELECT mp.name into v_name_mp
+                    v_datos_recuperar = v_parametros.json_data :: JSON ->> v_data;
+
+                    FOR  v_record_json_data_detalle IN (SELECT * FROM json_array_elements(v_datos_recuperar :: JSON))
+
+                    loop
+
+                    /*Recuperamos el codigo de la forma de pago y en el cod de la tarjeta para el control de tarjetas*/
+                    SELECT mp.name,
+                           mp.mop_code,
+                           fp.fop_code
+                        into
+                            v_name_mp,
+                            v_codigo_tarjeta_control,
+                            v_codigo_fp_control
                     from obingresos.tmedio_pago_pw mp
-                    where mp.id_medio_pago_pw = v_id_forma_pago[i]::integer;
+                    inner join obingresos.tforma_pago_pw fp on fp.id_forma_pago_pw = mp.forma_pago_id
+                    where mp.id_medio_pago_pw = (v_record_json_data_detalle->>'id_medio_pago')::integer;
 
-                    raise notice 'Aqui llega la informacion %, %',v_codigo_moneda,v_name_mp;
+
+                    /** control de saldo para medio de pago recibo anticipo si saldos son menores o iguales a 0 no permite el pago***/
+					if (v_codigo_fp_control = 'RANT') then
+                      select codigo into v_mon_recibo from param.tmoneda where id_moneda = (v_record_json_data_detalle->>'id_moneda')::integer;
+
+                      if (v_record_json_data_detalle->>'saldo_recibo' = '') then
+                      	 raise exception 'El número de recibo no puede ser vacio favor verifique';
+                      end if;
+
+                      if (((v_record_json_data_detalle->>'monto_fp')::numeric > (v_record_json_data_detalle->>'saldo_recibo')::numeric) or ((v_record_json_data_detalle->>'saldo_recibo')::numeric <= 0 and (v_record_json_data_detalle->>'saldo_recibo')::numeric is not null)) then
+                         raise 'El saldo del recibo es: % % Falta un monto de % % para la forma de pago recibo anticipo.',v_mon_recibo,(v_record_json_data_detalle->>'saldo_recibo')::numeric, v_mon_recibo, (v_record_json_data_detalle->>'monto_fp')::numeric-(v_record_json_data_detalle->>'saldo_recibo')::numeric;
+                      end if;
+                    end if;
+                    /******************************************************************************************************************/
+
+
+
+                    /*Control para el numero y codigo de la tarjeta*/
+                      if (v_codigo_fp_control = 'CU') then
+                        if ((v_record_json_data_detalle->>'id_auxiliar')::varchar = '') then
+                            Raise exception 'La Cuenta Corriente no puede ser vacia, Favor verifique';
+                        end if;
+                      end if;
+                    /***********************************************/
+
+                    v_codigo_tarjeta_control = (case when v_codigo_tarjeta_control is not null then
+                                              v_codigo_tarjeta_control
+                                          else
+                                              NULL
+                                          end);
+
+                      if (v_codigo_tarjeta_control is not null and v_codigo_fp_control = 'CC') then
+                      	/*Control para el numero y codigo de la tarjeta*/
+                        if ((v_record_json_data_detalle->>'numero_tarjeta')::varchar = '' or (v_record_json_data_detalle->>'numero_tarjeta')::varchar is null) then
+                        	Raise exception 'El Nro. de Tarjeta no puede ser vacio favor verifique';
+                        end if;
+
+                         if ((v_record_json_data_detalle->>'codigo_tarjeta')::varchar = '' or (v_record_json_data_detalle->>'codigo_tarjeta')::varchar is null) then
+                        	Raise exception 'El Cod. de Tarjeta no puede ser vacio favor verifique';
+                        end if;
+
+                        if( select char_length((v_record_json_data_detalle->>'codigo_tarjeta')::varchar) <> 6)then
+                            raise exception 'El codigo de tarjeta debe tener 6 dígitos verifique.';
+                        end if;
+                      	/***********************************************/
+
+
+                          if (substring((v_record_json_data_detalle->>'numero_tarjeta')::varchar from 1 for 1) != 'X') then
+                             v_res = pxp.f_valida_numero_tarjeta_credito((v_record_json_data_detalle->>'numero_tarjeta')::varchar,v_codigo_tarjeta_control);
+                          end if;
+                      end if;
+                    /*******************************************************************************************************/
+
+                    /*Control del Nro de MCO*/
+
+                      /*Control para el numero y codigo de la tarjeta*/
+                      if (v_codigo_fp_control = 'MCO') then
+                        if ((v_record_json_data_detalle->>'mco')::varchar = '' or (v_record_json_data_detalle->>'mco')::varchar is null) then
+                            Raise exception 'El Nro. de MCO no puede ser vacio favor verifique';
+                        end if;
+                      end if;
+                      /***********************************************/
+
+                      if ((v_record_json_data_detalle->>'mco')::varchar is not null and left ((v_record_json_data_detalle->>'mco')::varchar,3)<> '930' and (v_record_json_data_detalle->>'mco')::varchar <> '' )then
+                          raise exception 'Segunda forma de pago el numero del MCO tiene que empezar con 930';
+                      end if;
+
+                      if ((v_record_json_data_detalle->>'mco')::varchar is not null and char_length((v_record_json_data_detalle->>'mco')::varchar) <> 15 and (v_record_json_data_detalle->>'mco')::varchar <> '') then
+                          raise exception 'Segunda forma de pago el numero del MCO debe tener 15 digitos obligatorios, 930000000012345';
+                      end if;
+                    /************************/
+
+                      /*Controlamos que los montos de las formas de pago no sean 0*/
+                      IF ((v_record_json_data_detalle->>'monto_fp')::numeric <= 0) THEN
+                            raise 'El importe de la primera forma de pago, no puede ser menor o igual a cero';
+                      END IF;
+                      /*************************************************************/
+
+                      /*Insertamos el nuevo medio de pago*/
+                      INSERT INTO
+                        obingresos.tboleto_amadeus_forma_pago
+                      (
+                        id_usuario_reg,
+                        importe,
+                        id_medio_pago,
+                        id_boleto_amadeus,
+                        id_moneda,
+                        --ctacte,
+                        numero_tarjeta,
+                        codigo_tarjeta,
+                        tarjeta,
+                        id_usuario_fp_corregido,
+                        id_auxiliar,
+                        registro_mod,
+                        mco--,
+                        --modificado
+                        ,id_venta
+                      )
+                      VALUES (
+                        p_id_usuario,
+                        (v_record_json_data_detalle->>'monto_fp')::numeric,
+                        (v_record_json_data_detalle->>'id_medio_pago')::integer,
+                        v_id_boleto_amadeus_el,
+                        (v_record_json_data_detalle->>'id_moneda')::integer,
+                        --v_parametros.ctacte,
+                        (v_record_json_data_detalle->>'numero_tarjeta')::varchar,
+                        replace(upper((v_record_json_data_detalle->>'codigo_tarjeta')::varchar),' ',''),
+                        v_codigo_tarjeta_control,
+                        p_id_usuario,
+                        (v_record_json_data_detalle->>'id_auxiliar')::integer,
+                        null,
+                        (v_record_json_data_detalle->>'mco')::varchar--,
+                        --'si'
+                        ,(v_record_json_data_detalle->>'id_venta')::integer
+                      );
+                     /*************************************************/
+
+                    end loop;
+
 
                 end loop;
 
-               -- raise exception 'Aqui llega la respuesta %',v_parametros.cantidad_fp;
+                select count(*) into v_cantidad_fp
+                from obingresos.tboleto_amadeus_forma_pago
+                where id_boleto_amadeus =   v_id_boleto_amadeus_el;
 
-                 --Definicion de la respuesta
-                  --v_resp = pxp.f_agrega_clave(v_resp,'mensaje',v_establecimiento);
-                  --v_resp = pxp.f_agrega_clave(v_resp,'establecimiento',v_establecimiento);
+                v_acumulado_fp = 0;
 
-                  --Devuelve la respuesta
-                  --return v_resp;
+                /*Aqui control de montos para el total de la venta*/
+                for v_registros in (  select bol.id_medio_pago,
+                                             bol.id_moneda,
+                                             bol.importe
+                                      from obingresos.tboleto_amadeus_forma_pago bol
+                                      where bol.id_boleto_amadeus = v_id_boleto_amadeus_el) loop
+
+
+                  select mon.id_moneda
+                  INTO
+                  v_id_moneda_base
+                  from param.tmoneda mon
+                  where mon.tipo_moneda = 'base';
+
+
+                  /*Aqui condicionales para el tipo de cambio y tener la moneda en dolar como en bs*/
+                  if (v_registros.id_moneda = 2 and v_id_moneda_venta = 2) then
+
+                      v_monto_fp =  param.f_convertir_moneda(v_registros.id_moneda,v_id_moneda_base,v_registros.importe,v_fecha_emision::date,'CUS',2, NULL,'si');
+                      v_monto_total_base = param.f_convertir_moneda(v_id_moneda_venta,v_id_moneda_base,v_monto_total_boleto,v_fecha_emision::date,'CUS',2, NULL,'si');
+
+                  elsif (v_registros.id_moneda != 2 and v_id_moneda_venta = 2) then
+
+                      v_monto_fp = v_registros.importe;
+                      v_monto_total_base = param.f_convertir_moneda(v_id_moneda_venta,v_id_moneda_base,v_monto_total_boleto,v_fecha_emision::date,'CUS',2, NULL,'si');
+
+                  elsif (v_registros.id_moneda = 2 and v_id_moneda_venta != 2) then
+
+                      v_monto_fp = param.f_convertir_moneda(v_registros.id_moneda,v_id_moneda_base,v_registros.importe,v_fecha_emision::date,'CUS',2, NULL,'si');
+                      v_monto_total_base = v_monto_total_boleto;
+
+                  elsif (v_registros.id_moneda != 2 and v_id_moneda_venta != 2) then
+
+                      v_monto_fp = v_registros.importe;
+                      v_monto_total_base = v_monto_total_boleto;
+
+                  end if;
+
+
+                  if (v_monto_fp >= v_monto_total_base and v_cantidad_fp > 1) then
+                    raise exception 'Se ha definido mas de una forma de pago, pero existe una que supera el valor de la venta(solo se requiere una forma de pago)';
+                  end if;
+
+
+                  if (v_monto_fp > v_monto_total_base and v_cantidad_fp = 1) then
+                    raise exception 'El monto ingresado % en la forma de pago supera el total de la venta %, favor verifique',v_monto_fp,v_monto_total_base;
+                  end if;
+
+
+                  v_acumulado_fp = v_acumulado_fp + v_monto_fp;
+
+
+                end loop;
+               /**************************************************/
+
+
+               /*Aqui Controlamos que el total cobrado sea igual o mayor a la venta en dolar*/
+               select sum(round(fp.importe,2)) into v_suma_fp_dolar
+               from obingresos.tboleto_amadeus_forma_pago fp
+               where fp.id_boleto_amadeus = v_id_boleto_amadeus_el
+               and fp.id_moneda = 2;
+               /********************************************************************/
+
+               v_suma_fp_dolar = param.f_convertir_moneda(2,v_id_moneda_base,(COALESCE(v_suma_fp_dolar,0)),v_fecha_emision::date,'CUS',2, NULL,'si');
+
+               select sum(round(fp.importe,2)) into v_suma_fp_bolivianos
+               from obingresos.tboleto_amadeus_forma_pago fp
+               where fp.id_boleto_amadeus = v_id_boleto_amadeus_el
+               and fp.id_moneda = 1;
+
+               v_suma_total = COALESCE (v_suma_fp_bolivianos,0) + COALESCE (v_suma_fp_dolar,0);
+
+               --raise exception 'Aqui el total %',v_suma_total;
+
+              if (v_suma_total < v_monto_total_base) then
+
+              	v_conversion_dolar = param.f_convertir_moneda(v_id_moneda_base,2,(COALESCE((v_monto_total_base - v_suma_total),0)),v_fecha_emision::date,'CUS',2, NULL,'si');
+
+
+                raise exception 'El importe recibido es menor al valor de la venta, falta % BOB o % USD', (v_monto_total_base - v_suma_total), v_conversion_dolar;
+              end if;
+
+
+              --Definicion de la respuesta
+              v_resp = pxp.f_agrega_clave(v_resp,'mensaje','Modificacion Exitosa');
+              v_resp = pxp.f_agrega_clave(v_resp,'establecimiento','Modificacion de formas de pago Correctamente');
+
+              --Devuelve la respuesta
+              return v_resp;
+
+            end;
+
+    /*********************************
+        #TRANSACCION:  'KIU_CONTROL_MP_IME'
+        #DESCRIPCION:	Control para los Medios de Pago de un Boleto para Stage
+        #AUTOR:		Ismael Valdivia
+        #FECHA:		19-08-2021 16:00:00
+        ***********************************/
+
+        elsif(p_transaccion='KIU_CONTROL_MP_IME')then
+
+            begin
+
+            	/*Creamos la tabla temporal para que insertemos ahi para hacer el calculo*/
+                create temp table medio_pago_temporal_stage (
+                                                                id_moneda integer,
+                                                                importe numeric
+                                                              )on commit drop;
+                /*************************************************************************/
+
+
+
+
+            	for i in 1..(v_parametros.cantidad_fp) loop
+
+                	v_data = 'medio_pago_'||i;
+
+                    v_datos_recuperar = v_parametros.json_data :: JSON ->> v_data;
+
+                    FOR  v_record_json_data_detalle IN (SELECT * FROM json_array_elements(v_datos_recuperar :: JSON))
+
+                    loop
+
+                    /*Recuperamos el codigo de la forma de pago y en el cod de la tarjeta para el control de tarjetas*/
+                    SELECT mp.name,
+                           mp.mop_code,
+                           fp.fop_code
+                        into
+                            v_name_mp,
+                            v_codigo_tarjeta_control,
+                            v_codigo_fp_control
+                    from obingresos.tmedio_pago_pw mp
+                    inner join obingresos.tforma_pago_pw fp on fp.id_forma_pago_pw = mp.forma_pago_id
+                    where mp.id_medio_pago_pw = (v_record_json_data_detalle->>'id_medio_pago')::integer;
+
+
+                    /** control de saldo para medio de pago recibo anticipo si saldos son menores o iguales a 0 no permite el pago***/
+					if (v_codigo_fp_control = 'RANT') then
+                      select codigo into v_mon_recibo from param.tmoneda where id_moneda = (v_record_json_data_detalle->>'id_moneda')::integer;
+
+                      if (v_record_json_data_detalle->>'saldo_recibo' = '') then
+                      	 raise exception 'El número de recibo no puede ser vacio favor verifique';
+                      end if;
+
+                      if (((v_record_json_data_detalle->>'monto_fp')::numeric > (v_record_json_data_detalle->>'saldo_recibo')::numeric) or ((v_record_json_data_detalle->>'saldo_recibo')::numeric <= 0 and (v_record_json_data_detalle->>'saldo_recibo')::numeric is not null)) then
+                         raise 'El saldo del recibo es: % % Falta un monto de % % para la forma de pago recibo anticipo.',v_mon_recibo,(v_record_json_data_detalle->>'saldo_recibo')::numeric, v_mon_recibo, (v_record_json_data_detalle->>'monto_fp')::numeric-(v_record_json_data_detalle->>'saldo_recibo')::numeric;
+                      end if;
+                    end if;
+                    /******************************************************************************************************************/
+
+
+
+                    /*Control para el numero y codigo de la tarjeta*/
+                      if (v_codigo_fp_control = 'CU') then
+                        if ((v_record_json_data_detalle->>'id_auxiliar')::varchar = '') then
+                            Raise exception 'La Cuenta Corriente no puede ser vacia, Favor verifique';
+                        end if;
+                      end if;
+                    /***********************************************/
+
+                    v_codigo_tarjeta_control = (case when v_codigo_tarjeta_control is not null then
+                                              v_codigo_tarjeta_control
+                                          else
+                                              NULL
+                                          end);
+
+                      if (v_codigo_tarjeta_control is not null and v_codigo_fp_control = 'CC') then
+                      	/*Control para el numero y codigo de la tarjeta*/
+                        if ((v_record_json_data_detalle->>'numero_tarjeta')::varchar = '' or (v_record_json_data_detalle->>'numero_tarjeta')::varchar is null) then
+                        	Raise exception 'El Nro. de Tarjeta no puede ser vacio favor verifique';
+                        end if;
+
+                         if ((v_record_json_data_detalle->>'codigo_tarjeta')::varchar = '' or (v_record_json_data_detalle->>'codigo_tarjeta')::varchar is null) then
+                        	Raise exception 'El Cod. de Tarjeta no puede ser vacio favor verifique';
+                        end if;
+
+                        if( select char_length((v_record_json_data_detalle->>'codigo_tarjeta')::varchar) <> 6)then
+                            raise exception 'El codigo de tarjeta debe tener 6 dígitos verifique.';
+                        end if;
+                      	/***********************************************/
+
+
+                          if (substring((v_record_json_data_detalle->>'numero_tarjeta')::varchar from 1 for 1) != 'X') then
+                             v_res = pxp.f_valida_numero_tarjeta_credito((v_record_json_data_detalle->>'numero_tarjeta')::varchar,v_codigo_tarjeta_control);
+                          end if;
+                      end if;
+                    /*******************************************************************************************************/
+
+                    /*Control del Nro de MCO*/
+
+                      /*Control para el numero y codigo de la tarjeta*/
+                      if (v_codigo_fp_control = 'MCO') then
+                        if ((v_record_json_data_detalle->>'mco')::varchar = '' or (v_record_json_data_detalle->>'mco')::varchar is null) then
+                            Raise exception 'El Nro. de MCO no puede ser vacio favor verifique';
+                        end if;
+                      end if;
+                      /***********************************************/
+
+                      if ((v_record_json_data_detalle->>'mco')::varchar is not null and left ((v_record_json_data_detalle->>'mco')::varchar,3)<> '930' and (v_record_json_data_detalle->>'mco')::varchar <> '' )then
+                          raise exception 'Segunda forma de pago el numero del MCO tiene que empezar con 930';
+                      end if;
+
+                      if ((v_record_json_data_detalle->>'mco')::varchar is not null and char_length((v_record_json_data_detalle->>'mco')::varchar) <> 15 and (v_record_json_data_detalle->>'mco')::varchar <> '') then
+                          raise exception 'Segunda forma de pago el numero del MCO debe tener 15 digitos obligatorios, 930000000012345';
+                      end if;
+                    /************************/
+
+                      /*Controlamos que los montos de las formas de pago no sean 0*/
+                      IF ((v_record_json_data_detalle->>'monto_fp')::numeric <= 0) THEN
+                            raise 'El importe de la primera forma de pago, no puede ser menor o igual a cero';
+                      END IF;
+                      /*************************************************************/
+
+                      /*Insertamos el nuevo medio de pago*/
+                      INSERT INTO
+                        medio_pago_temporal_stage
+                      (
+                        id_moneda,
+                        importe
+                      )
+                      VALUES (
+                        (v_record_json_data_detalle->>'id_moneda')::integer,
+                        (v_record_json_data_detalle->>'monto_fp')::numeric
+                      );
+                     /*************************************************/
+
+                    end loop;
+
+
+                end loop;
+
+                select count(*) into v_cantidad_fp
+                from medio_pago_temporal_stage;
+
+                v_acumulado_fp = 0;
+
+                /*Aqui control de montos para el total de la venta*/
+                for v_registros in (  select id_moneda,
+                                             importe
+                                      from medio_pago_temporal_stage) loop
+
+
+                  select mon.id_moneda
+                  INTO
+                  v_id_moneda_base
+                  from param.tmoneda mon
+                  where mon.tipo_moneda = 'base';
+
+                  select mon.id_moneda into v_id_moneda_venta
+                  from param.tmoneda mon
+                  where mon.codigo_internacional = v_parametros.moneda_venta;
+
+                  v_fecha_emision = v_parametros.fecha_boleto::date;
+
+                  v_monto_total_boleto = v_parametros.total_venta - v_parametros.comision_venta;
+
+
+                  /*Aqui condicionales para el tipo de cambio y tener la moneda en dolar como en bs*/
+                  if (v_registros.id_moneda = 2 and v_id_moneda_venta = 2) then
+
+                      v_monto_fp =  param.f_convertir_moneda(v_registros.id_moneda,v_id_moneda_base,v_registros.importe,v_fecha_emision::date,'CUS',2, NULL,'si');
+                      v_monto_total_base = param.f_convertir_moneda(v_id_moneda_venta,v_id_moneda_base,v_monto_total_boleto,v_fecha_emision::date,'CUS',2, NULL,'si');
+
+                  elsif (v_registros.id_moneda != 2 and v_id_moneda_venta = 2) then
+
+                      v_monto_fp = v_registros.importe;
+                      v_monto_total_base = param.f_convertir_moneda(v_id_moneda_venta,v_id_moneda_base,v_monto_total_boleto,v_fecha_emision::date,'CUS',2, NULL,'si');
+
+                  elsif (v_registros.id_moneda = 2 and v_id_moneda_venta != 2) then
+
+                      v_monto_fp = param.f_convertir_moneda(v_registros.id_moneda,v_id_moneda_base,v_registros.importe,v_fecha_emision::date,'CUS',2, NULL,'si');
+                      v_monto_total_base = v_monto_total_boleto;
+
+                  elsif (v_registros.id_moneda != 2 and v_id_moneda_venta != 2) then
+
+                      v_monto_fp = v_registros.importe;
+                      v_monto_total_base = v_monto_total_boleto;
+
+                  end if;
+
+
+                  if (v_monto_fp >= v_monto_total_base and v_cantidad_fp > 1) then
+                    raise exception 'Se ha definido mas de una forma de pago, pero existe una que supera el valor de la venta(solo se requiere una forma de pago)';
+                  end if;
+
+
+                  if (v_monto_fp > v_monto_total_base and v_cantidad_fp = 1) then
+                    raise exception 'El monto ingresado % en la forma de pago supera el total de la venta %, favor verifique',v_monto_fp,v_monto_total_base;
+                  end if;
+
+
+                  v_acumulado_fp = v_acumulado_fp + v_monto_fp;
+
+
+                end loop;
+               /**************************************************/
+
+
+               /*Aqui Controlamos que el total cobrado sea igual o mayor a la venta en dolar*/
+               select sum(round(fp.importe,2)) into v_suma_fp_dolar
+               from medio_pago_temporal_stage fp
+               where fp.id_moneda = 2;
+               /********************************************************************/
+
+               v_suma_fp_dolar = param.f_convertir_moneda(2,v_id_moneda_base,(COALESCE(v_suma_fp_dolar,0)),v_fecha_emision::date,'CUS',2, NULL,'si');
+
+               select sum(round(fp.importe,2)) into v_suma_fp_bolivianos
+               from medio_pago_temporal_stage fp
+               where fp.id_moneda = 1;
+
+               v_suma_total = COALESCE (v_suma_fp_bolivianos,0) + COALESCE (v_suma_fp_dolar,0);
+
+
+              if (v_suma_total < v_monto_total_base) then
+
+              	v_conversion_dolar = param.f_convertir_moneda(v_id_moneda_base,2,(COALESCE((v_monto_total_base - v_suma_total),0)),v_fecha_emision::date,'CUS',2, NULL,'si');
+
+
+                raise exception 'El importe recibido es menor al valor de la venta, falta % BOB o % USD', (v_monto_total_base - v_suma_total), v_conversion_dolar;
+              end if;
+
+
+              --Definicion de la respuesta
+              v_resp = pxp.f_agrega_clave(v_resp,'mensaje','Modificacion Exitosa');
+              v_resp = pxp.f_agrega_clave(v_resp,'establecimiento','Modificacion de formas de pago Correctamente');
+
+              --Devuelve la respuesta
+              return v_resp;
 
             end;
 

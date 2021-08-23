@@ -842,7 +842,7 @@ class ACTBoleto extends ACTbase{
 
     $nro_ticket = $this->objParam->getParametro('nro_ticket');
 
-    if ($nro_ticket != '' && $nro_ticket != null) {
+    if ($nro_ticket != '' && $nro_ticket != null  && $nro_ticket != 'null') {
       $array = array();
       $curl = curl_init();
       //var_dump("aqui llega el json devuelto",$nro_ticket);exit;

@@ -129,6 +129,8 @@ DECLARE
     v_nombre_punto_venta		varchar;
 	v_nombre_cajero				varchar;
     v_mon_recibo				varchar;
+    v_id_auxiliar_llega			integer;
+    v_id_venta_llega			integer;
 BEGIN
 
     v_nombre_funcion = 'kiu.ft_boa_kiu_json';
@@ -1102,6 +1104,18 @@ BEGIN
                     inner join obingresos.tforma_pago_pw fp on fp.id_forma_pago_pw = mp.forma_pago_id
                     where mp.id_medio_pago_pw = (v_record_json_data_detalle->>'id_medio_pago')::integer;
 
+                    if ((v_record_json_data_detalle->>'id_auxiliar') != '') then
+                      v_id_auxiliar_llega = (v_record_json_data_detalle->>'id_auxiliar')::integer;
+                    else
+                      v_id_auxiliar_llega = null;
+                    end if;
+
+                    if ((v_record_json_data_detalle->>'id_venta') != '') then
+                      v_id_venta_llega = (v_record_json_data_detalle->>'id_venta')::integer;
+                    else
+                      v_id_venta_llega = null;
+                    end if;
+
 
                     /** control de saldo para medio de pago recibo anticipo si saldos son menores o iguales a 0 no permite el pago***/
 					if (v_codigo_fp_control = 'RANT') then
@@ -1211,11 +1225,11 @@ BEGIN
                         replace(upper((v_record_json_data_detalle->>'codigo_tarjeta')::varchar),' ',''),
                         v_codigo_tarjeta_control,
                         p_id_usuario,
-                        (v_record_json_data_detalle->>'id_auxiliar')::integer,
+                        v_id_auxiliar_llega,
                         null,
                         (v_record_json_data_detalle->>'mco')::varchar--,
                         --'si'
-                        ,(v_record_json_data_detalle->>'id_venta')::integer
+                        ,v_id_venta_llega
                       );
                      /*************************************************/
 
@@ -1364,7 +1378,6 @@ BEGIN
                     from obingresos.tmedio_pago_pw mp
                     inner join obingresos.tforma_pago_pw fp on fp.id_forma_pago_pw = mp.forma_pago_id
                     where mp.id_medio_pago_pw = (v_record_json_data_detalle->>'id_medio_pago')::integer;
-
 
                     /** control de saldo para medio de pago recibo anticipo si saldos son menores o iguales a 0 no permite el pago***/
 					if (v_codigo_fp_control = 'RANT') then

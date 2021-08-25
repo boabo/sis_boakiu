@@ -223,65 +223,65 @@ class ACTMediosPagoBoleto extends ACTbase{
       exit;
   } else {
 
-    // $data = array("insFP" => json_encode($datos_enviar_stage),
-    //               "delFP" => json_encode($datos_eliminar_array),
-    //               "tkt" => $boleto,
-    //               "issueDate" => $fecha_boleto
-    //
-    //             );
-    // $datosEnvio = json_encode($data);
-    //
-    // $datos = $datosEnvio;
-    //
-    //
-    // $envio_dato = $datosEnvio;
-    // $request =  'http://sms.obairlines.bo/CommissionServices/ServiceComision.svc/ModPayMethod';
-    // $session = curl_init($request);
-    // curl_setopt($session, CURLOPT_CUSTOMREQUEST, "POST");
-    // curl_setopt($session, CURLOPT_POSTFIELDS, $envio_dato);
-    // curl_setopt($session, CURLOPT_RETURNTRANSFER, true);
-    // curl_setopt($session, CURLOPT_HTTPHEADER, array(
-    //         'Content-Type: application/json',
-    //         'Content-Length: ' . strlen($envio_dato))
-    // );
-    //
-    // $result = curl_exec($session);
-    // curl_close($session);
-    //
-    //
-    // $respuesta = json_decode($result);
-    //
-    // $respuesta_final = json_decode($respuesta->ModPayMethodResult);
-    // $respuesta_estado_servicio = $respuesta_final->State;
-    //
-    //
-    // if ($respuesta_estado_servicio == true) {
-    //   $respuesta_base_datos = $respuesta_final->Data;
-    //
-    //   if ($respuesta_base_datos) {
-    //     $respuesta_mensaje = $respuesta_base_datos[0]->Result;
-    //
-    //     if ($respuesta_mensaje == 1) {
-    //       $respuesta_mensaje = "Medio de Pago modificado Correctamente en ERP y STAGE";
-    //       $error = true;
-    //     } else {
-    //       $error = false;
-    //       $respuesta_mensaje = 'Error en la modificacion DB, No se modificó el medio de Pago en Stage vuelva a intentarlo, si el error Persiste contactarse con Area de Sistemas';
-    //     }
-    //
-    //   } else {
-    //     $error = false;
-    //     $respuesta_mensaje = 'Error en el Servicio cod: 2 No se modificó el medio de Pago en Stage vuelva a intentarlo, si el error Persiste contactarse con Area de Sistemas';
-    //   }
-    //
-    // } else {
-    //   $error = false;
-    //   $respuesta_mensaje = 'Error en el servicio cod: 1 No se modificó el medio de Pago en Stage vuelva a intentarlo, si el error Persiste contactarse con Area de Sistemas';
-    // }
+    $data = array("insFP" => json_encode($datos_enviar_stage),
+                  "delFP" => json_encode($datos_eliminar_array),
+                  "tkt" => $boleto,
+                  "issueDate" => $fecha_boleto
+
+                );
+    $datosEnvio = json_encode($data);
+
+    $datos = $datosEnvio;
+
+
+    $envio_dato = $datosEnvio;
+    $request =  'http://sms.obairlines.bo/CommissionServices/ServiceComision.svc/ModPayMethod';
+    $session = curl_init($request);
+    curl_setopt($session, CURLOPT_CUSTOMREQUEST, "POST");
+    curl_setopt($session, CURLOPT_POSTFIELDS, $envio_dato);
+    curl_setopt($session, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($session, CURLOPT_HTTPHEADER, array(
+            'Content-Type: application/json',
+            'Content-Length: ' . strlen($envio_dato))
+    );
+
+    $result = curl_exec($session);
+    curl_close($session);
+
+
+    $respuesta = json_decode($result);
+
+    $respuesta_final = json_decode($respuesta->ModPayMethodResult);
+    $respuesta_estado_servicio = $respuesta_final->State;
+
+
+    if ($respuesta_estado_servicio == true) {
+      $respuesta_base_datos = $respuesta_final->Data;
+
+      if ($respuesta_base_datos) {
+        $respuesta_mensaje = $respuesta_base_datos[0]->Result;
+
+        if ($respuesta_mensaje == 1) {
+          $respuesta_mensaje = "Medio de Pago modificado Correctamente en ERP y STAGE";
+          $error = true;
+        } else {
+          $error = false;
+          $respuesta_mensaje = 'Error en la modificacion DB, No se modificó el medio de Pago en Stage vuelva a intentarlo, si el error Persiste contactarse con Area de Sistemas';
+        }
+
+      } else {
+        $error = false;
+        $respuesta_mensaje = 'Error en el Servicio cod: 2 No se modificó el medio de Pago en Stage vuelva a intentarlo, si el error Persiste contactarse con Area de Sistemas';
+      }
+
+    } else {
+      $error = false;
+      $respuesta_mensaje = 'Error en el servicio cod: 1 No se modificó el medio de Pago en Stage vuelva a intentarlo, si el error Persiste contactarse con Area de Sistemas';
+    }
 
     $send = array(
-        "success" => true, // todo
-        "data" => ["mensaje_exito" => "Exito"]
+        "success" => $error, // todo
+        "data" => ["mensaje_exito" => $respuesta_mensaje]
     );
     echo json_encode($send);
   }
@@ -499,65 +499,65 @@ class ACTMediosPagoBoleto extends ACTbase{
         $this->res->imprimirRespuesta($this->res->generarJson());
          exit;
     } else {
-      // $data = array("insFP" => json_encode($datos_enviar_stage),
-      //               "delFP" => json_encode($datos_eliminar_array),
-      //               "tkt" => $boleto,
-      //               "issueDate" => $fecha_boleto
-      //
-      //             );
-      // $datosEnvio = json_encode($data);
-      //
-      // $datos = $datosEnvio;
-      //
-      //
-      // $envio_dato = $datosEnvio;
-      // $request =  'http://sms.obairlines.bo/CommissionServices/ServiceComision.svc/ModPayMethod';
-      // $session = curl_init($request);
-      // curl_setopt($session, CURLOPT_CUSTOMREQUEST, "POST");
-      // curl_setopt($session, CURLOPT_POSTFIELDS, $envio_dato);
-      // curl_setopt($session, CURLOPT_RETURNTRANSFER, true);
-      // curl_setopt($session, CURLOPT_HTTPHEADER, array(
-      //         'Content-Type: application/json',
-      //         'Content-Length: ' . strlen($envio_dato))
-      // );
-      //
-      // $result = curl_exec($session);
-      // curl_close($session);
-      //
-      //
-      // $respuesta = json_decode($result);
-      //
-      // $respuesta_final = json_decode($respuesta->ModPayMethodResult);
-      // $respuesta_estado_servicio = $respuesta_final->State;
-      //
-      //
-      // if ($respuesta_estado_servicio == true) {
-      //   $respuesta_base_datos = $respuesta_final->Data;
-      //
-      //   if ($respuesta_base_datos) {
-      //     $respuesta_mensaje = $respuesta_base_datos[0]->Result;
-      //
-      //     if ($respuesta_mensaje == 1) {
-      //       $respuesta_mensaje = "Medio de Pago modificado Correctamente en ERP y STAGE";
-      //       $error = true;
-      //     } else {
-      //       $error = false;
-      //       $respuesta_mensaje = 'Error en la modificacion DB, No se modificó el medio de Pago en Stage vuelva a intentarlo, si el error Persiste contactarse con Area de Sistemas';
-      //     }
-      //
-      //   } else {
-      //     $error = false;
-      //     $respuesta_mensaje = 'Error en el Servicio cod: 2 No se modificó el medio de Pago en Stage vuelva a intentarlo, si el error Persiste contactarse con Area de Sistemas';
-      //   }
-      //
-      // } else {
-      //   $error = false;
-      //   $respuesta_mensaje = 'Error en el servicio cod: 1 No se modificó el medio de Pago en Stage vuelva a intentarlo, si el error Persiste contactarse con Area de Sistemas';
-      // }
+      $data = array("insFP" => json_encode($datos_enviar_stage),
+                    "delFP" => json_encode($datos_eliminar_array),
+                    "tkt" => $boleto,
+                    "issueDate" => $fecha_boleto
+
+                  );
+      $datosEnvio = json_encode($data);
+
+      $datos = $datosEnvio;
+
+
+      $envio_dato = $datosEnvio;
+      $request =  'http://sms.obairlines.bo/CommissionServices/ServiceComision.svc/ModPayMethod';
+      $session = curl_init($request);
+      curl_setopt($session, CURLOPT_CUSTOMREQUEST, "POST");
+      curl_setopt($session, CURLOPT_POSTFIELDS, $envio_dato);
+      curl_setopt($session, CURLOPT_RETURNTRANSFER, true);
+      curl_setopt($session, CURLOPT_HTTPHEADER, array(
+              'Content-Type: application/json',
+              'Content-Length: ' . strlen($envio_dato))
+      );
+
+      $result = curl_exec($session);
+      curl_close($session);
+
+
+      $respuesta = json_decode($result);
+
+      $respuesta_final = json_decode($respuesta->ModPayMethodResult);
+      $respuesta_estado_servicio = $respuesta_final->State;
+
+
+      if ($respuesta_estado_servicio == true) {
+        $respuesta_base_datos = $respuesta_final->Data;
+
+        if ($respuesta_base_datos) {
+          $respuesta_mensaje = $respuesta_base_datos[0]->Result;
+
+          if ($respuesta_mensaje == 1) {
+            $respuesta_mensaje = "Medio de Pago modificado Correctamente en ERP y STAGE";
+            $error = true;
+          } else {
+            $error = false;
+            $respuesta_mensaje = 'Error en la modificacion DB, No se modificó el medio de Pago en Stage vuelva a intentarlo, si el error Persiste contactarse con Area de Sistemas';
+          }
+
+        } else {
+          $error = false;
+          $respuesta_mensaje = 'Error en el Servicio cod: 2 No se modificó el medio de Pago en Stage vuelva a intentarlo, si el error Persiste contactarse con Area de Sistemas';
+        }
+
+      } else {
+        $error = false;
+        $respuesta_mensaje = 'Error en el servicio cod: 1 No se modificó el medio de Pago en Stage vuelva a intentarlo, si el error Persiste contactarse con Area de Sistemas';
+      }
 
       $send = array(
-          "success" => true, // todo
-          "data" => ["mensaje_exito" => "Exito STAGE"]
+          "success" => $error, // todo
+          "data" => ["mensaje_exito" => $respuesta_mensaje]
       );
       echo json_encode($send);
     }

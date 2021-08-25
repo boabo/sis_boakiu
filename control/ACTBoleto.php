@@ -117,6 +117,65 @@ class ACTBoleto extends ACTbase{
               array_push($forma_pago_cc_modificadas_stage, $data_json[0]['accountingPayment'][$i]);
             }
         }
+        /*Aqui recuperamos los Id por defecto en las modificaciones de Stage*/
+        $id_medio_pago_defecto = array();
+
+        for ($i=0; $i < $formas_pago_modificadas; $i++) {
+
+            $codigo_mp = $data_json[0]['accountingPayment'][$i]['payMethodCode'];
+            $codigo_fp = $data_json[0]['accountingPayment'][$i]['payCode'];
+            $description_mp = $data_json[0]['accountingPayment'][$i]['payDescription'];
+
+            $this->objParam->addParametro('codigo_medio_pago',$codigo_mp);
+            $this->objParam->addParametro('codigo_forma_pago',$codigo_fp);
+            $this->objParam->addParametro('description_mp',$description_mp);
+
+            $this->objFunc=$this->create('MODMediosPagoBoleto');
+            $this->resMedioPago=$this->objFunc->recuperarMedioPago($this->objParam);
+
+            if($this->resMedioPago->getTipo()!='EXITO'){
+                $this->resMedioPago->imprimirRespuesta($this->resMedioPago->generarJson());
+                exit;
+            }
+
+            $resultado = $this->resMedioPago->getDatos();
+
+            $medio_pago_recuperado = $resultado["medio_pago"];
+
+
+            array_push($id_medio_pago_defecto, json_decode($medio_pago_recuperado));
+
+        }
+
+        $id_medio_pago_originales = array();
+        $formas_pago_originales = count($data_json[0]['payment']);
+        for ($i=0; $i < $formas_pago_originales; $i++) {
+
+            $codigo_mp = $data_json[0]['payment'][$i]['paymentMethodCode'];
+            $codigo_fp = $data_json[0]['payment'][$i]['paymentCode'];
+            $description_mp = $data_json[0]['payment'][$i]['paymentDescription'];
+
+            $this->objParam->addParametro('codigo_medio_pago',$codigo_mp);
+            $this->objParam->addParametro('codigo_forma_pago',$codigo_fp);
+            $this->objParam->addParametro('description_mp',$description_mp);
+
+            $this->objFunc=$this->create('MODMediosPagoBoleto');
+            $this->resMedioPagoOriginal=$this->objFunc->recuperarMedioPago($this->objParam);
+
+            if($this->resMedioPagoOriginal->getTipo()!='EXITO'){
+                $this->resMedioPagoOriginal->imprimirRespuesta($this->resMedioPagoOriginal->generarJson());
+                exit;
+            }
+
+            $resultado_original = $this->resMedioPagoOriginal->getDatos();
+
+            $medio_pago_recuperado_original = $resultado_original["medio_pago"];
+
+
+            array_push($id_medio_pago_originales, json_decode($medio_pago_recuperado_original));
+
+        }
+
         /********************************************************************/
 
         /*Recuperar el Codigo de Comercio para la Conciliacion*/
@@ -181,7 +240,9 @@ class ACTBoleto extends ACTbase{
                 "data_erp" =>  json_decode($datosErp['mensaje']),
                 "forma_pago_tarjeta" => $forma_pago_cc,
                 "nombre_comercio_erp"=>$codigo_comercio_erp,
-                "forma_pago_modificadas_stage"=>$forma_pago_cc_modificadas_stage
+                "forma_pago_modificadas_stage"=>$forma_pago_cc_modificadas_stage,
+                "medios_pago_Defecto"=>$id_medio_pago_defecto,
+                "medios_pago_Defecto_original"=>$id_medio_pago_originales
             );
 
             echo json_encode($send);

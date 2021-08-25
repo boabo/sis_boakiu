@@ -77,6 +77,28 @@ class MODMediosPagoBoleto extends MODbase{
 
     }
 
+    function recuperarMedioPago() {
+
+      $this->procedimiento='kiu.ft_boa_kiu_json';
+      $this->transaccion='KIU_MP_DEFAULT_IME';
+      $this->tipo_procedimiento='IME';
+
+      //var_dump("aqui el nro",$this->objParam->getParametro('nro_comercio'));
+      //Define los parametros para la funcion
+      $this->setParametro('codigo_medio_pago','codigo_medio_pago','varchar');
+      $this->setParametro('codigo_forma_pago','codigo_forma_pago','varchar');
+      $this->setParametro('description_mp','description_mp','varchar');
+
+      //Ejecuta la instruccion
+      $this->armarConsulta();
+      $this->ejecutarConsulta();
+
+      //Devuelve la respuesta
+      return $this->respuesta;
+
+
+    }
+
 
 }
 ?>

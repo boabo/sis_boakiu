@@ -129,8 +129,8 @@ DECLARE
     v_nombre_punto_venta		varchar;
 	v_nombre_cajero				varchar;
     v_mon_recibo				varchar;
-    v_id_auxiliar_llega			integer;
-    v_id_venta_llega			integer;
+    v_json_medio_pago_id		varchar;
+    v_medio_pago				varchar;
 BEGIN
 
     v_nombre_funcion = 'kiu.ft_boa_kiu_json';
@@ -975,6 +975,10 @@ BEGIN
                     inner join obingresos.tforma_pago_pw fp on fp.id_forma_pago_pw = mp.forma_pago_id
                     where mp.id_medio_pago_pw = (v_record_json_data_detalle->>'id_medio_pago')::integer;
 
+                    IF ((v_record_json_data_detalle->>'monto_fp') = '') THEN
+                            raise 'El monto de la forma de pago no puede ser vacio ni cero';
+                      END IF;
+
                     if (v_codigo_tarjeta_control = 'CASH' and ((v_record_json_data_detalle->>'id_moneda')::integer = 2)) then
                         v_total_efectivo_dolar_modificado = (v_total_efectivo_dolar_modificado + (v_record_json_data_detalle->>'monto_fp')::numeric);
 
@@ -1104,18 +1108,6 @@ BEGIN
                     inner join obingresos.tforma_pago_pw fp on fp.id_forma_pago_pw = mp.forma_pago_id
                     where mp.id_medio_pago_pw = (v_record_json_data_detalle->>'id_medio_pago')::integer;
 
-                    if ((v_record_json_data_detalle->>'id_auxiliar') != '') then
-                      v_id_auxiliar_llega = (v_record_json_data_detalle->>'id_auxiliar')::integer;
-                    else
-                      v_id_auxiliar_llega = null;
-                    end if;
-
-                    if ((v_record_json_data_detalle->>'id_venta') != '') then
-                      v_id_venta_llega = (v_record_json_data_detalle->>'id_venta')::integer;
-                    else
-                      v_id_venta_llega = null;
-                    end if;
-
 
                     /** control de saldo para medio de pago recibo anticipo si saldos son menores o iguales a 0 no permite el pago***/
 					if (v_codigo_fp_control = 'RANT') then
@@ -1188,9 +1180,13 @@ BEGIN
                       end if;
                     /************************/
 
+                    IF ((v_record_json_data_detalle->>'monto_fp') = '') THEN
+                            raise 'El monto de la forma de pago no puede ser vacio ni cero';
+                    END IF;
+
                       /*Controlamos que los montos de las formas de pago no sean 0*/
                       IF ((v_record_json_data_detalle->>'monto_fp')::numeric <= 0) THEN
-                            raise 'El importe de la primera forma de pago, no puede ser menor o igual a cero';
+                            raise 'No se permite Medios de pago con Monto menor o igual a cero';
                       END IF;
                       /*************************************************************/
 
@@ -1225,11 +1221,11 @@ BEGIN
                         replace(upper((v_record_json_data_detalle->>'codigo_tarjeta')::varchar),' ',''),
                         v_codigo_tarjeta_control,
                         p_id_usuario,
-                        v_id_auxiliar_llega,
+                        (v_record_json_data_detalle->>'id_auxiliar')::integer,
                         null,
                         (v_record_json_data_detalle->>'mco')::varchar--,
                         --'si'
-                        ,v_id_venta_llega
+                        ,(v_record_json_data_detalle->>'id_venta')::integer
                       );
                      /*************************************************/
 
@@ -1379,6 +1375,7 @@ BEGIN
                     inner join obingresos.tforma_pago_pw fp on fp.id_forma_pago_pw = mp.forma_pago_id
                     where mp.id_medio_pago_pw = (v_record_json_data_detalle->>'id_medio_pago')::integer;
 
+
                     /** control de saldo para medio de pago recibo anticipo si saldos son menores o iguales a 0 no permite el pago***/
 					if (v_codigo_fp_control = 'RANT') then
                       select codigo into v_mon_recibo from param.tmoneda where id_moneda = (v_record_json_data_detalle->>'id_moneda')::integer;
@@ -1450,9 +1447,13 @@ BEGIN
                       end if;
                     /************************/
 
+                     IF ((v_record_json_data_detalle->>'monto_fp') = '') THEN
+                            raise 'El monto de la forma de pago no puede ser vacio ni cero';
+                      END IF;
+
                       /*Controlamos que los montos de las formas de pago no sean 0*/
                       IF ((v_record_json_data_detalle->>'monto_fp')::numeric <= 0) THEN
-                            raise 'El importe de la primera forma de pago, no puede ser menor o igual a cero';
+                            raise 'No se permite Medios de pago con Monto menor o igual a cero';
                       END IF;
                       /*************************************************************/
 
@@ -1571,6 +1572,51 @@ BEGIN
 
               --Devuelve la respuesta
               return v_resp;
+
+            end;
+
+    /*********************************
+        #TRANSACCION:  'KIU_MP_DEFAULT_IME'
+        #DESCRIPCION:	Recuperacion del Medio de pago por defecto
+        #AUTOR:		Ismael Valdivia
+        #FECHA:		24-08-2021 11:00:00
+        ***********************************/
+
+        elsif(p_transaccion='KIU_MP_DEFAULT_IME')then
+
+            begin
+
+
+            	if (trim(v_parametros.description_mp) = 'CASH') then
+                	v_medio_pago = 'CASH';
+                else
+                	v_medio_pago = trim(v_parametros.codigo_medio_pago);
+                end if;
+
+
+            	  SELECT TO_JSON(ROW_TO_JSON(jsonData) :: TEXT) #>> '{}' as json
+					into v_json_medio_pago_id
+                    from (
+                    SELECT
+                         (
+                            SELECT ARRAY_TO_JSON(ARRAY_AGG(ROW_TO_JSON(medio_pago)))
+                             FROM
+                                 (
+                                      select mp.id_medio_pago_pw as id_forma_pago,
+                                      mp.name as nombre
+                                      from obingresos.tmedio_pago_pw mp
+                                      where 'BOLETOS'=any(mp.sw_autorizacion) and 'BOL'=any(mp.regionales)
+                                      and mp.mop_code = v_medio_pago
+                                 ) medio_pago
+                             ) as data_medio_pago
+                    ) jsonData;
+                   --  raise exception 'Aqui la respuesta %',v_establecimiento;
+                 --Definicion de la respuesta
+                  v_resp = pxp.f_agrega_clave(v_resp,'mensaje',v_json_medio_pago_id);
+                  v_resp = pxp.f_agrega_clave(v_resp,'medio_pago',v_json_medio_pago_id);
+
+                  --Devuelve la respuesta
+                  return v_resp;
 
             end;
 

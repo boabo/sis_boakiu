@@ -83,9 +83,7 @@ DECLARE
     v_num_tarjeta varchar[];
     v_cod_tarjeta varchar[];
     v_mco varchar[];
-    v_id_auxiliar varchar[];
     v_id_auxiliar_anticipo varchar[];
-    v_id_venta varchar[];
     v_monto_fp numeric;
 
 
@@ -133,6 +131,8 @@ DECLARE
     v_medio_pago				varchar;
     v_description_mp			varchar;
     v_codigo_medio_pago_mp		varchar;
+    v_id_auxiliar 				integer;
+    v_id_venta					integer;
 BEGIN
 
     v_nombre_funcion = 'kiu.ft_boa_kiu_json';
@@ -1192,6 +1192,21 @@ BEGIN
                       END IF;
                       /*************************************************************/
 
+
+                      if ((v_record_json_data_detalle->>'id_auxiliar')::varchar != '') then
+                          v_id_auxiliar = (v_record_json_data_detalle->>'id_auxiliar')::integer;
+                      else
+                      	  v_id_auxiliar = null;
+                      end if;
+
+                      if ((v_record_json_data_detalle->>'id_venta')::varchar != '') then
+                          v_id_venta = (v_record_json_data_detalle->>'id_venta')::integer;
+                      else
+                      	  v_id_venta = null;
+                      end if;
+
+
+
                       /*Insertamos el nuevo medio de pago*/
                       INSERT INTO
                         obingresos.tboleto_amadeus_forma_pago
@@ -1223,11 +1238,11 @@ BEGIN
                         replace(upper((v_record_json_data_detalle->>'codigo_tarjeta')::varchar),' ',''),
                         v_codigo_tarjeta_control,
                         p_id_usuario,
-                        (v_record_json_data_detalle->>'id_auxiliar')::integer,
+                        v_id_auxiliar,
                         null,
                         (v_record_json_data_detalle->>'mco')::varchar--,
                         --'si'
-                        ,(v_record_json_data_detalle->>'id_venta')::integer
+                        ,v_id_venta
                       );
                      /*************************************************/
 

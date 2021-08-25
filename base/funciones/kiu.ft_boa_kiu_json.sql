@@ -131,6 +131,8 @@ DECLARE
     v_mon_recibo				varchar;
     v_json_medio_pago_id		varchar;
     v_medio_pago				varchar;
+    v_description_mp			varchar;
+    v_codigo_medio_pago_mp		varchar;
 BEGIN
 
     v_nombre_funcion = 'kiu.ft_boa_kiu_json';
@@ -1586,14 +1588,27 @@ BEGIN
 
             begin
 
-
-            	if (trim(v_parametros.description_mp) = 'CASH') then
-                	v_medio_pago = 'CASH';
+                if (pxp.f_existe_parametro(p_tabla,'description_mp')) then
+                  v_description_mp = trim(v_parametros.description_mp);
                 else
-                	v_medio_pago = trim(v_parametros.codigo_medio_pago);
+                  v_description_mp = '';
+                end if;
+
+                if (pxp.f_existe_parametro(p_tabla,'codigo_medio_pago')) then
+                  v_codigo_medio_pago_mp = trim(v_parametros.codigo_medio_pago);
+                else
+                  v_codigo_medio_pago_mp = '';
                 end if;
 
 
+            	if (v_description_mp = 'CASH') then
+                	v_medio_pago = 'CASH';
+                else
+                	v_medio_pago = v_codigo_medio_pago_mp;
+                end if;
+
+
+                if (v_medio_pago != '') then
             	  SELECT TO_JSON(ROW_TO_JSON(jsonData) :: TEXT) #>> '{}' as json
 					into v_json_medio_pago_id
                     from (
@@ -1610,6 +1625,7 @@ BEGIN
                                  ) medio_pago
                              ) as data_medio_pago
                     ) jsonData;
+                  end if;
                    --  raise exception 'Aqui la respuesta %',v_establecimiento;
                  --Definicion de la respuesta
                   v_resp = pxp.f_agrega_clave(v_resp,'mensaje',v_json_medio_pago_id);

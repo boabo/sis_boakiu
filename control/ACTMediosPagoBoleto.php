@@ -313,7 +313,7 @@ class ACTMediosPagoBoleto extends ACTbase{
 
     $datos_a_eliminar_stage = json_decode($this->objParam->getParametro('datos_modificados'));
     $cantidad_datos_eliminar = count($datos_a_eliminar_stage);
-
+    //var_dump("aqui llega datos para log",$datos_a_eliminar_stage);exit;
     $datos_eliminar = array();
     $datos_eliminar_array = array();
     $datos_oficial_stage_eliminar = array();
@@ -491,6 +491,10 @@ class ACTMediosPagoBoleto extends ACTbase{
     $this->objParam->addParametro('total_venta', $monto_venta);
     $this->objParam->addParametro('moneda_venta', $moneda_venta);
     $this->objParam->addParametro('comision_venta', $comision_venta);
+
+    /*Agregando para log de Stage*/
+    $this->objParam->addParametro('data_modificados_stage', $this->objParam->getParametro('datos_modificados'));
+    $this->objParam->addParametro('cantidad_datos_stage', $cantidad_datos_eliminar);
 
     $this->objFunc=$this->create('MODMediosPagoBoleto');
     $this->res=$this->objFunc->ControlDatosMediosPAgo($this->objParam);

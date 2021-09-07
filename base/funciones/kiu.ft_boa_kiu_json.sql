@@ -133,6 +133,8 @@ DECLARE
     v_codigo_medio_pago_mp		varchar;
     v_id_auxiliar 				integer;
     v_id_venta					integer;
+
+    v_record_json_data_log 		record;
 BEGIN
 
     v_nombre_funcion = 'kiu.ft_boa_kiu_json';
@@ -270,6 +272,7 @@ BEGIN
                                            inner join segu.tusuario tu on tu.id_usuario = tl.id_usuario_reg
                                            INNER JOIN segu.vpersona2 vp on vp.id_persona = tu.id_persona
                                   where trim(tlb.data_stage->>'ticketNumber') = trim(v_parametros.nro_ticket) -- aca cambiara el ticket number
+                                  and tl.estado = 'pagado'
                               ),t_nota AS (
                                        SELECT nota.*
                                        FROM decr.tnota nota
@@ -304,7 +307,17 @@ BEGIN
             ),t_comision_erp as (
                 select   COALESCE(bolam.comision,0)::numeric as comision
                 from obingresos.tboleto_amadeus bolam
-                where  bolam.nro_boleto = trim(v_parametros.nro_ticket))
+                where  bolam.nro_boleto = trim(v_parametros.nro_ticket)
+            ),t_boleto_erp as (
+                select
+                	   (case when count (bolam.nro_boleto) > 0 then
+                       		'si'
+                       else
+                       		'no'
+                	   end) as existe_erp
+                from obingresos.tboleto_amadeus bolam
+                where  bolam.nro_boleto = trim(v_parametros.nro_ticket)
+            )
 
             SELECT TO_JSON(ROW_TO_JSON(jsonData) :: TEXT) #>> '{}' as json
             into v_json
@@ -381,7 +394,15 @@ BEGIN
                                       SELECT *
                                       FROM t_comision_erp
                                   ) comision_erp
-                         ) AS comision_erp
+                         ) AS comision_erp,
+
+                         (
+                             SELECT TO_JSON(existe_erp)
+                             FROM (
+                                      SELECT *
+                                      FROM t_boleto_erp
+                                  ) existe_erp
+                         ) AS existe_erp
 
                  ) jsonData;
 
@@ -1581,6 +1602,68 @@ BEGIN
 
                 raise exception 'El importe recibido es menor al valor de la venta, falta % BOB o % USD', (v_monto_total_base - v_suma_total), v_conversion_dolar;
               end if;
+
+
+
+              /*Aumentando para recuperar el Log de boletos de solo stage*/
+              for j in 0..(v_parametros.cantidad_datos_stage::numeric-1) loop
+
+
+                        insert into obingresos.tlog_modificaciones_medios_pago_completo(
+                        												nro_boleto,
+                                                                        fecha_emision,
+                                                                        pay_code,--1
+                                                                        pay_description,--2
+                                                                        pay_method_code,--3
+                                                                        pay_method_description,--4
+                                                                        pay_instance_code,--5
+                                                                        pay_instance_description,--6
+                                                                        pay_amount,--7
+                                                                        pay_currency,--8
+                                                                        reference,--9
+                                                                        issue_date,--10
+                                                                        credit_card_number,--11
+                                                                        authorization_code,--12
+                                                                        observaciones,--13
+                                                                        id_usuario_reg,
+                                                                        fecha_reg
+                                                                    ) values(
+                                                                        trim(v_parametros.boleto),
+                                                                        v_parametros.fecha_boleto,
+                                                                        REPLACE(((v_parametros.data_modificados_stage :: JSON ->> j)::json->'payCode')::text,'"',''),--1
+                                                                        REPLACE(((v_parametros.data_modificados_stage :: JSON ->> j)::json->'payDescription')::text,'"',''),--2
+                                                                        REPLACE(((v_parametros.data_modificados_stage :: JSON ->> j)::json->'payMethodCode')::text,'"',''),--3
+                                                                        REPLACE(((v_parametros.data_modificados_stage :: JSON ->> j)::json->'payMethodDescription')::text,'"',''),--4
+                                                                        REPLACE(((v_parametros.data_modificados_stage :: JSON ->> j)::json->'payInstanceCode')::text,'"',''),--5
+                                                                        REPLACE(((v_parametros.data_modificados_stage :: JSON ->> j)::json->'payInstanceDescription')::text,'"',''),--6
+
+                                                                        (case when (((v_parametros.data_modificados_stage :: JSON ->> j)::json->'payAmount')::text != '') then
+                                                                        	((v_parametros.data_modificados_stage :: JSON ->> j)::json->'payAmount')::text::numeric--7
+                                                                        else
+                                                                        	0::numeric
+                                                                        end),
+
+                                                                        REPLACE(((v_parametros.data_modificados_stage :: JSON ->> j)::json->'payCurrency')::text,'"',''),--8
+                                                                        REPLACE(((v_parametros.data_modificados_stage :: JSON ->> j)::json->'reference')::text,'"',''),--9
+
+                                                                        (case when (((v_parametros.data_modificados_stage :: JSON ->> j)::json->'IssueDate')::text != '') then
+                                                                        	REPLACE(((v_parametros.data_modificados_stage :: JSON ->> j)::json->'IssueDate')::text,'"','')::date--10
+                                                                        else
+                                                                        	null
+                                                                        end),
+
+                                                                        REPLACE(trim(((v_parametros.data_modificados_stage :: JSON ->> j)::json->'creditCardNumber')::text),'"',''),--11
+                                                                        REPLACE(trim(((v_parametros.data_modificados_stage :: JSON ->> j)::json->'authorizationCode')::varchar),'"',''),--12
+                                                                        'Log moficiacion boletos Solo Stage',--13
+                                                                        p_id_usuario,
+                                                                        now()
+                                                                    );
+
+
+
+                END LOOP;
+
+              /***********************************************************/
 
 
               --Definicion de la respuesta

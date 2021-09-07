@@ -119,9 +119,11 @@ class ACTBoleto extends ACTbase{
         }
         /*Aqui recuperamos los Id por defecto en las modificaciones de Stage*/
         $id_medio_pago_defecto = array();
+        $medios_pago_modificadas_stage = array();
 
         for ($i=0; $i < $formas_pago_modificadas; $i++) {
 
+          if ($data_json[0]['accountingPayment'][$i]['payAmount'] > 0) {
             $codigo_mp = $data_json[0]['accountingPayment'][$i]['payMethodCode'];
             $codigo_fp = $data_json[0]['accountingPayment'][$i]['payCode'];
             $description_mp = $data_json[0]['accountingPayment'][$i]['payDescription'];
@@ -144,13 +146,17 @@ class ACTBoleto extends ACTbase{
 
 
             array_push($id_medio_pago_defecto, json_decode($medio_pago_recuperado));
+            array_push($medios_pago_modificadas_stage, $data_json[0]['accountingPayment'][$i]);
+          }
+
 
         }
 
         $id_medio_pago_originales = array();
+        $medios_pago_originales_stage = array();
         $formas_pago_originales = count($data_json[0]['payment']);
         for ($i=0; $i < $formas_pago_originales; $i++) {
-
+          if ($data_json[0]['payment'][$i]['paymentAmount'] > 0) {
             $codigo_mp = $data_json[0]['payment'][$i]['paymentMethodCode'];
             $codigo_fp = $data_json[0]['payment'][$i]['paymentCode'];
             $description_mp = $data_json[0]['payment'][$i]['paymentDescription'];
@@ -173,6 +179,8 @@ class ACTBoleto extends ACTbase{
 
 
             array_push($id_medio_pago_originales, json_decode($medio_pago_recuperado_original));
+            array_push($medios_pago_originales_stage, $data_json[0]['payment'][$i]);
+          }
 
         }
 
@@ -232,7 +240,7 @@ class ACTBoleto extends ACTbase{
             }
         }
         /******************************************************/
-
+        //var_dump("aqui llega datos",$data_json[0]); exit;
         if($data_json != null) {
             $send = array(
                 "nro_ticket" =>  $nro_ticket,
@@ -242,7 +250,10 @@ class ACTBoleto extends ACTbase{
                 "nombre_comercio_erp"=>$codigo_comercio_erp,
                 "forma_pago_modificadas_stage"=>$forma_pago_cc_modificadas_stage,
                 "medios_pago_Defecto"=>$id_medio_pago_defecto,
-                "medios_pago_Defecto_original"=>$id_medio_pago_originales
+                "medios_pago_Defecto_original"=>$id_medio_pago_originales,
+                /*Medios de pago sin monto 0*/
+                "medios_pago_originales_stage"=>$medios_pago_originales_stage,
+                "medios_pago_modificadas_stage"=>$medios_pago_modificadas_stage
             );
 
             echo json_encode($send);

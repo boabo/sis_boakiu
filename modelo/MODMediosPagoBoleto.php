@@ -68,10 +68,13 @@ class MODMediosPagoBoleto extends MODbase{
       $this->setParametro('moneda_venta','moneda_venta','varchar');
       $this->setParametro('comision_venta','comision_venta','numeric');
 
+      $this->setParametro('data_modificados_stage','data_modificados_stage','text');
+      $this->setParametro('cantidad_datos_stage','cantidad_datos_stage','numeric');
+
       //Ejecuta la instruccion
       $this->armarConsulta();
       $this->ejecutarConsulta();
-    //  var_dump("aqui llega el dato",$this->respuesta);exit;
+      //var_dump("aqui llega el dato",$this->respuesta);exit;
       //Devuelve la respuesta
       return $this->respuesta;
 

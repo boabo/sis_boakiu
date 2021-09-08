@@ -976,7 +976,7 @@ class ACTBoleto extends ACTbase{
             $establecimiento = ($resultado['establecimiento']);
             //var_dump("aqui resultado",$establecimiento);
             $data_json[$i] += ["NameComercio"=>$establecimiento];
-          } elseif ($data_json[$i] && ($data_json[$i]['Formato'] == 'ATC')) {
+          } else { //if ($data_json[$i] && ($data_json[$i]['Formato'] == 'ATC')) {
             $nro_comercio = $data_json[$i]['EstablishmentCode'];
 
             $this->objParam->addParametro('nro_comercio',$nro_comercio);

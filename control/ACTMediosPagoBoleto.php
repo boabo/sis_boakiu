@@ -187,6 +187,7 @@ class ACTMediosPagoBoleto extends ACTbase{
 
 
 
+
     $datos += ["medio_pago_".$i => [
 
                                       ($array_datos)
@@ -223,6 +224,18 @@ class ACTMediosPagoBoleto extends ACTbase{
       exit;
   } else {
 
+    $respuesta_erp_data = $this->res->getDatos();
+
+    $datos_convertido = json_decode($respuesta_erp_data['jsonId'],true);
+
+    $cantidad_json_erp = count($datos_convertido);
+
+
+    for ($j=0; $j < $cantidad_json_erp ; $j++) {
+      $datos_enviar_stage[$j] += ["ErpId" => "".$datos_convertido[$j]["id_forma_pago_erp"].""];
+    }
+
+
     $data = array("insFP" => json_encode($datos_enviar_stage),
                   "delFP" => json_encode($datos_eliminar_array),
                   "tkt" => $boleto,
@@ -232,7 +245,6 @@ class ACTMediosPagoBoleto extends ACTbase{
     $datosEnvio = json_encode($data);
 
     $datos = $datosEnvio;
-
 
     $envio_dato = $datosEnvio;
     $request =  'http://sms.obairlines.bo/CommissionServices/ServiceComision.svc/ModPayMethod';
@@ -467,6 +479,8 @@ class ACTMediosPagoBoleto extends ACTbase{
           $datos_para_stage += ["payAmount" => ""];
       }
       /*****************************************/
+
+      $datos_para_stage += ["ErpId" => null];
 
       $datos += ["medio_pago_".$i => [
 

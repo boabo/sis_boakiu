@@ -535,6 +535,7 @@ class ACTBoleto extends ACTbase{
         exit;
       }
 
+      $respuesta_erp = $this->res->getDatos();
 
 
       /*Aqui para guardar en el log de datos*/
@@ -554,12 +555,14 @@ class ACTBoleto extends ACTbase{
                       "issueDate"=>$this->objParam->getParametro('issueDate'),
                       /*Aumentando para mandar nuevos campos*/
                       "nroTarjeta_ant"=>$this->objParam->getParametro('nro_tarjeta_1_old'),
-                      "codAutorizacion_ant"=>$this->objParam->getParametro('nro_autorizacion_1_old')
+                      "codAutorizacion_ant"=>$this->objParam->getParametro('nro_autorizacion_1_old'),
+                          /*A solicitud de Orlando se incluira el idErp*/
+                        "ErpId" => $respuesta_erp['forma_pago_1']
                     );
         $datosUpdate = json_encode($data);
 
         $envio_dato = $datosUpdate;
-
+        
         $request =  'http://sms.obairlines.bo/CommissionServices/ServiceComision.svc/UpdatePaymentMethod';
         $session = curl_init($request);
         curl_setopt($session, CURLOPT_CUSTOMREQUEST, "POST");
@@ -615,7 +618,9 @@ class ACTBoleto extends ACTbase{
                         "issueDate"=>$this->objParam->getParametro('issueDate'),
                         /*Aumentando para mandar nuevos campos*/
                         "nroTarjeta_ant"=>$this->objParam->getParametro('nro_tarjeta_2_old'),
-                        "codAutorizacion_ant"=>$this->objParam->getParametro('nro_autorizacion_2_old')
+                        "codAutorizacion_ant"=>$this->objParam->getParametro('nro_autorizacion_2_old'),
+                            /*A solicitud de Orlando se incluira el idErp*/
+                        "ErpId" => $respuesta_erp['forma_pago_2']
                       );
           $datosUpdate2 = json_encode($data2);
 
@@ -727,7 +732,9 @@ class ACTBoleto extends ACTbase{
                     "issueDate"=>$this->objParam->getParametro('issueDate'),
                     /*Aumentando para mandar nuevos campos*/
                     "nroTarjeta_ant"=>$this->objParam->getParametro('nro_tarjeta_1_old'),
-                    "codAutorizacion_ant"=>$this->objParam->getParametro('nro_autorizacion_1_old')
+                    "codAutorizacion_ant"=>$this->objParam->getParametro('nro_autorizacion_1_old'),
+                    /*A solicitud de Orlando se incluira el idErp*/
+                    "ErpId" => null
                   );
 
       $datosUpdate = json_encode($data);
@@ -785,7 +792,8 @@ class ACTBoleto extends ACTbase{
                       "issueDate"=>$this->objParam->getParametro('issueDate'),
                       /*Aumentando para mandar nuevos campos*/
                       "nroTarjeta_ant"=>$this->objParam->getParametro('nro_tarjeta_2_old'),
-                      "codAutorizacion_ant"=>$this->objParam->getParametro('nro_autorizacion_2_old')
+                      "codAutorizacion_ant"=>$this->objParam->getParametro('nro_autorizacion_2_old'),
+                      "ErpId" => null
                     );
         $datosUpdate2 = json_encode($data2);
 

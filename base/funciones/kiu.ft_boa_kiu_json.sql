@@ -135,6 +135,11 @@ DECLARE
     v_id_venta					integer;
 
     v_record_json_data_log 		record;
+
+    v_id_forma_pago_1			integer;
+    v_id_forma_pago_2			integer;
+    v_id_boleto_amadeus_forma_pago	integer;
+    v_id_erp_data				varchar;
 BEGIN
 
     v_nombre_funcion = 'kiu.ft_boa_kiu_json';
@@ -570,7 +575,7 @@ BEGIN
                       v_parametros.forma_pago_1::integer,--9
                       v_id_moneda_fp_1,--10
                       'no'--11
-                  );
+                  )RETURNING id_boleto_amadeus_forma_pago into v_id_forma_pago_1;
             /*Aqui Insertamos la segunda Tarjeta*/
             IF  pxp.f_existe_parametro(p_tabla,'forma_pago_2') THEN
                 if (v_parametros.forma_pago_2::integer is not null) then
@@ -630,192 +635,17 @@ BEGIN
                               v_parametros.forma_pago_2::integer,--9
                               v_id_moneda_fp_2,--10
                               'no'--11
-                          );
+                          )RETURNING id_boleto_amadeus_forma_pago into v_id_forma_pago_2;
                 end if;
             end if;
-
-           /* select count (fp.id_boleto_amadeus_forma_pago)
-            into
-                v_contador_id_forma_pago_amadeus
-            from obingresos.tboleto_amadeus_forma_pago fp
-            where fp.id_boleto_amadeus = v_id_boleto_amadeus
-              and (fp.codigo_tarjeta is not null and fp.codigo_tarjeta != '')
-              and (fp.numero_tarjeta is not null and fp.numero_tarjeta != '');
-
-            /*Validacion de la tarjeta*/
-            select mp.mop_code, fp.fop_code into v_codigo_tarjeta, v_codigo_fp
-            from obingresos.tmedio_pago_pw mp
-                     inner join obingresos.tforma_pago_pw fp on fp.id_forma_pago_pw = mp.forma_pago_id
-            where mp.id_medio_pago_pw = v_parametros.forma_pago_1::integer;
-
-
-            v_codigo_tarjeta = (case when v_codigo_tarjeta is not null then
-                                         v_codigo_tarjeta
-                                     else
-                                         NULL
-                end);
-
-            if (v_codigo_tarjeta is not null and v_codigo_fp = 'CC') then
-                if (substring(v_parametros.num_tarjeta_1::varchar from 1 for 1) != 'X') then
-                    v_res = pxp.f_valida_numero_tarjeta_credito(trim(v_parametros.num_tarjeta_1::varchar),v_codigo_tarjeta);
-                end if;
-            end if;
-            /*********************************************************************/
-
-
-            if (v_contador_id_forma_pago_amadeus = 0) then
-
-                select mp.mop_code
-                into
-                    v_code_mp
-                from obingresos.tmedio_pago_pw mp
-                where mp.id_medio_pago_pw = v_parametros.forma_pago_1::integer;
-
-
-
-                INSERT INTO obingresos.tboleto_amadeus_forma_pago
-                (id_usuario_reg,--1
-                 id_boleto_amadeus,  --2
-                 importe,--3
-                 tarjeta,--5
-                 numero_tarjeta,--6
-                 codigo_tarjeta,--7
-                 id_usuario_fp_corregido,--8
-                 id_medio_pago,--9
-                 id_moneda,--10
-                 modificado--11
-                )
-                VALUES(
-                          p_id_usuario,--1
-                          v_id_boleto_amadeus,--2
-                          v_parametros.monto_fp_1::numeric,--3
-                          v_code_mp,--5
-                          trim(v_parametros.num_tarjeta_1),--6
-                          trim(v_parametros.cod_tarjeta_1),--7
-                          p_id_usuario,--8
-                          v_parametros.forma_pago_1::integer,--9
-                          1,--10
-                          'no'--11
-                      );
-
-
-
-
-                IF  pxp.f_existe_parametro(p_tabla,'forma_pago_2') THEN
-                    if (v_parametros.forma_pago_2::integer is not null) then
-
-                        select mp.mop_code
-                        into
-                            v_code_mp_2
-                        from obingresos.tmedio_pago_pw mp
-                        where mp.id_medio_pago_pw = v_parametros.forma_pago_2::integer;
-
-                        /*Validacion de la tarjeta*/
-                        select mp.mop_code, fp.fop_code into v_codigo_tarjeta2, v_codigo_fp2
-                        from obingresos.tmedio_pago_pw mp
-                                 inner join obingresos.tforma_pago_pw fp on fp.id_forma_pago_pw = mp.forma_pago_id
-                        where mp.id_medio_pago_pw = v_parametros.forma_pago_2::integer;
-
-
-                        v_codigo_tarjeta2 = (case when v_codigo_tarjeta2 is not null then
-                                                      v_codigo_tarjeta2
-                                                  else
-                                                      NULL
-                            end);
-
-                        if (v_codigo_tarjeta2 is not null and v_codigo_fp2 = 'CC') then
-                            if (substring(v_parametros.num_tarjeta_2::varchar from 1 for 1) != 'X') then
-                                v_res2 = pxp.f_valida_numero_tarjeta_credito(trim(v_parametros.num_tarjeta_2::varchar),v_codigo_tarjeta2);
-                            end if;
-                        end if;
-                        /*********************************************************************/
-
-
-
-                        INSERT INTO obingresos.tboleto_amadeus_forma_pago
-                        (id_usuario_reg,--1
-                         id_boleto_amadeus,  --2
-                         importe,--3
-                         tarjeta,--5
-                         numero_tarjeta,--6
-                         codigo_tarjeta,--7
-                         id_usuario_fp_corregido,--8
-                         id_medio_pago,--9
-                         id_moneda,--10
-                         modificado--11
-                        )
-                        VALUES(
-                                  p_id_usuario,--1
-                                  v_id_boleto_amadeus,--2
-                                  v_parametros.monto_fp_2::numeric,--3
-                                  v_code_mp_2,--5
-                                  trim(v_parametros.num_tarjeta_2),--6
-                                  trim(v_parametros.cod_tarjeta_2),--7
-                                  p_id_usuario,--8
-                                  v_parametros.forma_pago_2::integer,--9
-                                  1,--10
-                                  'no'--11
-                              );
-                    end if;
-                end if;
-
-
-            else
-
-                select fp.id_boleto_amadeus_forma_pago
-                into
-                    v_id_forma_pago_amadeus
-                from obingresos.tboleto_amadeus_forma_pago fp
-                where fp.id_boleto_amadeus = v_id_boleto_amadeus
-                  and (fp.codigo_tarjeta is not null and fp.codigo_tarjeta != '')
-                  and (fp.numero_tarjeta is not null and fp.numero_tarjeta != '')
-                  and fp.importe = v_parametros.monto_fp_1::numeric;
-
-
-                update obingresos.tboleto_amadeus_forma_pago set
-                                                                 numero_tarjeta = trim(v_parametros.num_tarjeta_1),
-                                                                 codigo_tarjeta = trim(v_parametros.cod_tarjeta_1),
-                                                                 id_usuario_mod = p_id_usuario,
-                                                                 fecha_mod = now(),
-                                                                 modificado = 'no'
-                where id_boleto_amadeus_forma_pago = v_id_forma_pago_amadeus;
-
-
-                IF  pxp.f_existe_parametro(p_tabla,'forma_pago_2') THEN
-                    if (v_parametros.forma_pago_2::integer is not null) then
-
-                        select fp.id_boleto_amadeus_forma_pago
-                        into
-                            v_id_forma_pago_amadeus_2
-                        from obingresos.tboleto_amadeus_forma_pago fp
-                        where fp.id_boleto_amadeus = v_id_boleto_amadeus
-                          and (fp.codigo_tarjeta is not null and fp.codigo_tarjeta != '')
-                          and (fp.numero_tarjeta is not null and fp.numero_tarjeta != '')
-                          and fp.importe = v_parametros.monto_fp_2::numeric;
-
-
-                        update obingresos.tboleto_amadeus_forma_pago set
-                                                                         numero_tarjeta = trim(v_parametros.num_tarjeta_2),
-                                                                         codigo_tarjeta = trim(v_parametros.cod_tarjeta_2),
-                                                                         id_usuario_mod = p_id_usuario,
-                                                                         fecha_mod = now(),
-                                                                         modificado = 'no'
-                        where id_boleto_amadeus_forma_pago = v_id_forma_pago_amadeus_2 and
-                                id_boleto_amadeus_forma_pago not in (v_id_forma_pago_amadeus);
-
-                    end if;
-                end if;
-
-
-
-
-            end if;*/
 
 
 
             --Definicion de la respuesta
             v_resp = pxp.f_agrega_clave(v_resp,'mensaje','Medio de Pago modificado Correctamente');
             v_resp = pxp.f_agrega_clave(v_resp,'mensaje_exito','Medio de Pago modificado Correctamente en ERP');
+            v_resp = pxp.f_agrega_clave(v_resp,'forma_pago_1',v_id_forma_pago_1::varchar);
+            v_resp = pxp.f_agrega_clave(v_resp,'forma_pago_2',v_id_forma_pago_2::varchar);
             --Devuelve la respuesta
             return v_resp;
 
@@ -932,6 +762,14 @@ BEGIN
         elsif(p_transaccion='KIU_MOD_MP_IME')then
 
             begin
+
+            	/*Creamos la tabla temporal para que se inserte los id_forma_pago y devolverlo en Json para Stage*/
+                 create temp table id_formas_pago_temporal_stage (
+                                                        id_forma_pago_erp integer
+                                                      )on commit drop;
+                /*************************************************************************************************/
+
+
 
             	/*Aqui recuperamos el Id del Boleto para Eliminar sus formas de pago Actuales*/
                 select ama.id_boleto_amadeus,
@@ -1264,8 +1102,14 @@ BEGIN
                         (v_record_json_data_detalle->>'mco')::varchar--,
                         --'si'
                         ,v_id_venta
-                      );
+                      )RETURNING id_boleto_amadeus_forma_pago into v_id_boleto_amadeus_forma_pago;
                      /*************************************************/
+
+                     /*Insertamos en la tabla temporal los Ids*/
+                     INSERT INTO id_formas_pago_temporal_stage (id_forma_pago_erp
+                     											)VALUES(
+                                                                v_id_boleto_amadeus_forma_pago
+                                                                );
 
                     end loop;
 
@@ -1361,9 +1205,23 @@ BEGIN
               end if;
 
 
+
+              select(
+                      SELECT ARRAY_TO_JSON(ARRAY_AGG(ROW_TO_JSON(id_erp)))
+                      FROM
+                         (
+                             SELECT id_forma_pago_erp
+                             FROM id_formas_pago_temporal_stage
+                             order by id_forma_pago_erp asc
+                         ) id_erp
+                      ) into v_id_erp_data;
+
+
+
+
               --Definicion de la respuesta
               v_resp = pxp.f_agrega_clave(v_resp,'mensaje','Modificacion Exitosa');
-              v_resp = pxp.f_agrega_clave(v_resp,'establecimiento','Modificacion de formas de pago Correctamente');
+              v_resp = pxp.f_agrega_clave(v_resp,'jsonId',v_id_erp_data);
 
               --Devuelve la respuesta
               return v_resp;

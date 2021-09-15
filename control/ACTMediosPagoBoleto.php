@@ -480,7 +480,7 @@ class ACTMediosPagoBoleto extends ACTbase{
       }
       /*****************************************/
 
-      $datos_para_stage += ["ErpId" => null];
+      //$datos_para_stage += ["ErpId" => null];
 
       $datos += ["medio_pago_".$i => [
 
@@ -493,6 +493,7 @@ class ACTMediosPagoBoleto extends ACTbase{
 
 
       $array_datos = [];
+      $datos_para_stage = [];
 
     }
 
@@ -517,12 +518,16 @@ class ACTMediosPagoBoleto extends ACTbase{
         $this->res->imprimirRespuesta($this->res->generarJson());
          exit;
     } else {
+
+
+
       $data = array("insFP" => json_encode($datos_enviar_stage),
                     "delFP" => json_encode($datos_eliminar_array),
                     "tkt" => $boleto,
                     "issueDate" => $fecha_boleto
 
                   );
+
       $datosEnvio = json_encode($data);
 
       $datos = $datosEnvio;

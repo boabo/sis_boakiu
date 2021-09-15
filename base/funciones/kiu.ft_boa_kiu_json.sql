@@ -574,7 +574,7 @@ BEGIN
                       p_id_usuario,--8
                       v_parametros.forma_pago_1::integer,--9
                       v_id_moneda_fp_1,--10
-                      'no'--11
+                      'si'--11
                   )RETURNING id_boleto_amadeus_forma_pago into v_id_forma_pago_1;
             /*Aqui Insertamos la segunda Tarjeta*/
             IF  pxp.f_existe_parametro(p_tabla,'forma_pago_2') THEN
@@ -634,7 +634,7 @@ BEGIN
                               p_id_usuario,--8
                               v_parametros.forma_pago_2::integer,--9
                               v_id_moneda_fp_2,--10
-                              'no'--11
+                              'si'--11
                           )RETURNING id_boleto_amadeus_forma_pago into v_id_forma_pago_2;
                 end if;
             end if;
@@ -1082,9 +1082,9 @@ BEGIN
                         id_usuario_fp_corregido,
                         id_auxiliar,
                         registro_mod,
-                        mco--,
-                        --modificado
-                        ,id_venta
+                        mco,
+                        modificado,
+                        id_venta
                       )
                       VALUES (
                         p_id_usuario,
@@ -1099,9 +1099,9 @@ BEGIN
                         p_id_usuario,
                         v_id_auxiliar,
                         null,
-                        (v_record_json_data_detalle->>'mco')::varchar--,
-                        --'si'
-                        ,v_id_venta
+                        (v_record_json_data_detalle->>'mco')::varchar,
+                        'si',
+                        v_id_venta
                       )RETURNING id_boleto_amadeus_forma_pago into v_id_boleto_amadeus_forma_pago;
                      /*************************************************/
 

@@ -480,7 +480,7 @@ class ACTMediosPagoBoleto extends ACTbase{
       }
       /*****************************************/
 
-      //$datos_para_stage += ["ErpId" => null];
+      $datos_para_stage += ["ErpId" => null];
 
       $datos += ["medio_pago_".$i => [
 
@@ -527,7 +527,7 @@ class ACTMediosPagoBoleto extends ACTbase{
                     "issueDate" => $fecha_boleto
 
                   );
-
+                    var_dump("aqui llega data",$data);exit;
       $datosEnvio = json_encode($data);
 
       $datos = $datosEnvio;

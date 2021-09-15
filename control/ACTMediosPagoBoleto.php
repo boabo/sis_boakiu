@@ -527,7 +527,7 @@ class ACTMediosPagoBoleto extends ACTbase{
                     "issueDate" => $fecha_boleto
 
                   );
-                    var_dump("aqui llega data",$data);exit;
+                    
       $datosEnvio = json_encode($data);
 
       $datos = $datosEnvio;

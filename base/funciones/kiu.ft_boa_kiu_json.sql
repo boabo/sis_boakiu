@@ -538,12 +538,21 @@ BEGIN
                                          NULL
                 end);
 
+			if (trim(v_parametros.num_tarjeta_1) = '') then
+            	raise exception 'El número de tarjeta no puede ser vacio';
+            end if;
+
             if (v_codigo_tarjeta is not null and v_codigo_fp = 'CC') then
                 if (substring(v_parametros.num_tarjeta_1::varchar from 1 for 1) != 'X') then
                     v_res = pxp.f_valida_numero_tarjeta_credito(trim(v_parametros.num_tarjeta_1::varchar),v_codigo_tarjeta);
                 end if;
             end if;
             /*********************************************************************/
+
+
+			if (trim(v_parametros.cod_tarjeta_1) = '') then
+            	raise exception 'El codigo de la tarjeta no puede ser vacio';
+            end if;
 
             /*Insertamos el Registro de la targeta*/
             INSERT INTO obingresos.tboleto_amadeus_forma_pago
@@ -599,12 +608,20 @@ BEGIN
                                                   NULL
                         end);
 
+					if (trim(v_parametros.num_tarjeta_2) = '') then
+                        raise exception 'El número de tarjeta no puede ser vacio';
+                    end if;
+
                     if (v_codigo_tarjeta2 is not null and v_codigo_fp2 = 'CC') then
                         if (substring(v_parametros.num_tarjeta_2::varchar from 1 for 1) != 'X') then
                             v_res2 = pxp.f_valida_numero_tarjeta_credito(trim(v_parametros.num_tarjeta_2::varchar),v_codigo_tarjeta2);
                         end if;
                     end if;
                     /*********************************************************************/
+
+					if (trim(v_parametros.cod_tarjeta_2) = '') then
+                        raise exception 'El codigo de la tarjeta no puede ser vacio';
+                    end if;
 
                     INSERT INTO obingresos.tboleto_amadeus_forma_pago
                     (id_usuario_reg,--1

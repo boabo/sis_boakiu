@@ -694,8 +694,86 @@ BEGIN
                 v_cod_tarjeta_2 = trim(v_parametros.cod_tarjeta_2);
                 nro_tarjeta_2_old = v_parametros.nro_tarjeta_2_old;
                 nro_autorizacion_2_old = v_parametros.nro_autorizacion_2_old;
+
+                /*Validacion para que no se envie vacio*/
+                select mp.mop_code
+                into
+                    v_code_mp
+                from obingresos.tmedio_pago_pw mp
+                where mp.id_medio_pago_pw = v_parametros.forma_pago_2::integer;
+
+
+                /*Validacion de la tarjeta*/
+                select mp.mop_code, fp.fop_code into v_codigo_tarjeta, v_codigo_fp
+                from obingresos.tmedio_pago_pw mp
+                         inner join obingresos.tforma_pago_pw fp on fp.id_forma_pago_pw = mp.forma_pago_id
+                where mp.id_medio_pago_pw = v_parametros.forma_pago_2::integer;
+
+
+                v_codigo_tarjeta = (case when v_codigo_tarjeta is not null then
+                                             v_codigo_tarjeta
+                                         else
+                                             NULL
+                    end);
+
+                if (trim(v_num_tarjeta_2) = '') then
+                    raise exception 'El número de tarjeta no puede ser vacio';
+                end if;
+
+                if (v_codigo_tarjeta is not null and v_codigo_fp = 'CC') then
+                    if (substring(v_num_tarjeta_2::varchar from 1 for 1) != 'X') then
+                        v_res = pxp.f_valida_numero_tarjeta_credito(trim(v_num_tarjeta_2::varchar),v_codigo_tarjeta);
+                    end if;
+                end if;
+                /*********************************************************************/
+
+
+                if (trim(v_cod_tarjeta_2) = '') then
+                    raise exception 'El codigo de la tarjeta no puede ser vacio';
+                end if;
+                /***************************************/
+
+
+
             end if;
 
+            /*Validacion para que no se envie vacio*/
+            select mp.mop_code
+            into
+                v_code_mp
+            from obingresos.tmedio_pago_pw mp
+            where mp.id_medio_pago_pw = v_parametros.forma_pago_1::integer;
+
+
+            /*Validacion de la tarjeta*/
+            select mp.mop_code, fp.fop_code into v_codigo_tarjeta, v_codigo_fp
+            from obingresos.tmedio_pago_pw mp
+                     inner join obingresos.tforma_pago_pw fp on fp.id_forma_pago_pw = mp.forma_pago_id
+            where mp.id_medio_pago_pw = v_parametros.forma_pago_1::integer;
+
+
+            v_codigo_tarjeta = (case when v_codigo_tarjeta is not null then
+                                         v_codigo_tarjeta
+                                     else
+                                         NULL
+                end);
+
+			if (trim(v_parametros.num_tarjeta_1) = '') then
+            	raise exception 'El número de tarjeta no puede ser vacio';
+            end if;
+
+            if (v_codigo_tarjeta is not null and v_codigo_fp = 'CC') then
+                if (substring(v_parametros.num_tarjeta_1::varchar from 1 for 1) != 'X') then
+                    v_res = pxp.f_valida_numero_tarjeta_credito(trim(v_parametros.num_tarjeta_1::varchar),v_codigo_tarjeta);
+                end if;
+            end if;
+            /*********************************************************************/
+
+
+			if (trim(v_parametros.cod_tarjeta_1) = '') then
+            	raise exception 'El codigo de la tarjeta no puede ser vacio';
+            end if;
+            /***************************************/
 
             insert into obingresos.tlog_modificaciones_medios_pago(
                 estado_reg,--1

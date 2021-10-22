@@ -155,11 +155,20 @@ class ACTBoleto extends ACTbase{
         $id_medio_pago_originales = array();
         $medios_pago_originales_stage = array();
         $formas_pago_originales = count($data_json[0]['payment']);
+        /*Aqui para verificar si llega como external payments Ismael Valdivia(22/10/2021)*/
+        $es_external = '';
+        /*********************************************************************************/
+
         for ($i=0; $i < $formas_pago_originales; $i++) {
           if ($data_json[0]['payment'][$i]['paymentAmount'] > 0) {
             $codigo_mp = $data_json[0]['payment'][$i]['paymentMethodCode'];
             $codigo_fp = $data_json[0]['payment'][$i]['paymentCode'];
             $description_mp = $data_json[0]['payment'][$i]['paymentDescription'];
+
+            /*Aqui condicion para almacenar si tiene external payment*/
+            if ($codigo_fp == 'EXT') {
+              $es_external = 'si';
+            }
 
             $this->objParam->addParametro('codigo_medio_pago',$codigo_mp);
             $this->objParam->addParametro('codigo_forma_pago',$codigo_fp);
@@ -253,7 +262,8 @@ class ACTBoleto extends ACTbase{
                 "medios_pago_Defecto_original"=>$id_medio_pago_originales,
                 /*Medios de pago sin monto 0*/
                 "medios_pago_originales_stage"=>$medios_pago_originales_stage,
-                "medios_pago_modificadas_stage"=>$medios_pago_modificadas_stage
+                "medios_pago_modificadas_stage"=>$medios_pago_modificadas_stage,
+                "tiene_external"=>$es_external
             );
 
             echo json_encode($send);
@@ -562,7 +572,7 @@ class ACTBoleto extends ACTbase{
         $datosUpdate = json_encode($data);
 
         $envio_dato = $datosUpdate;
-        
+
         $request =  'http://sms.obairlines.bo/CommissionServices/ServiceComision.svc/UpdatePaymentMethod';
         $session = curl_init($request);
         curl_setopt($session, CURLOPT_CUSTOMREQUEST, "POST");

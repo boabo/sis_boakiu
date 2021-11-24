@@ -232,10 +232,11 @@ BEGIN
                          select tp_cajero.nombre_completo2 as cajero, tp_counter.nombre_completo2 as counter
                          from obingresos.tboleto_amadeus bolam
                                   inner join segu.tusuario tu_cajero on tu_cajero.id_usuario = bolam.id_usuario_cajero
-                                  inner join segu.tusuario_externo tue on tue.usuario_externo = bolam.agente_venta
-                                  inner join segu.tusuario tu_counter on tu_counter.id_usuario = tue.id_usuario
-                                  inner join segu.vpersona2 tp_cajero on tp_cajero.id_persona = tu_cajero.id_persona
-                                  inner join segu.vpersona2 tp_counter on tp_counter.id_persona = tu_counter.id_persona
+                                  /*Cambiando inner por left para que liste el cajero no muestra en la interfaz (Ismael Valdivia 24/11/2021)*/
+                                  left join segu.tusuario_externo tue on tue.usuario_externo = bolam.agente_venta
+                                  left join segu.tusuario tu_counter on tu_counter.id_usuario = tue.id_usuario
+                                  left join segu.vpersona2 tp_cajero on tp_cajero.id_persona = tu_cajero.id_persona
+                                  left join segu.vpersona2 tp_counter on tp_counter.id_persona = tu_counter.id_persona
                          where bolam.nro_boleto = trim(v_parametros.nro_ticket) limit 1
                      ), t_formas_pago_erp  as (
                 select   bolfp.codigo_tarjeta,

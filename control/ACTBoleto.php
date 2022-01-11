@@ -47,17 +47,17 @@ class ACTBoleto extends ACTbase{
   function getTicketInformationRecursive() {
         $nro_ticket = $this->objParam->getParametro('nro_ticket');
 
-        $this->objFunc=$this->create('MODBoleto');
-
-        $this->res=$this->objFunc->verFacturaErpBoleto($this->objParam);
-
-        if($this->res->getTipo()!='EXITO'){
-
-            $this->res->imprimirRespuesta($this->res->generarJson());
-            exit;
-        }
-
-        $datosErp = $this->res->getDatos();
+        // $this->objFunc=$this->create('MODBoleto');
+        //
+        // $this->res=$this->objFunc->verFacturaErpBoleto($this->objParam);
+        //
+        // if($this->res->getTipo()!='EXITO'){
+        //
+        //     $this->res->imprimirRespuesta($this->res->generarJson());
+        //     exit;
+        // }
+        //
+        // $datosErp = $this->res->getDatos();
 
 
 
@@ -92,6 +92,27 @@ class ACTBoleto extends ACTbase{
         curl_close($curl);
 
         $data_json = json_decode(preg_replace('/[\x00-\x1F\x80-\xFF]/', '', $response), true);
+
+
+        $fecha_boleto = date('d/m/Y',strtotime($data_json[0]['issueDate']));
+
+
+        $this->objParam->addParametro('fecha_boleto',$fecha_boleto);
+        /*Cambiando para mandar la fecha del boleto y hacer conexion a la nueva base de datos*/
+        $this->objFunc=$this->create('MODBoleto');
+
+        $this->res=$this->objFunc->verFacturaErpBoleto($this->objParam);
+
+        if($this->res->getTipo()!='EXITO'){
+
+            $this->res->imprimirRespuesta($this->res->generarJson());
+            exit;
+        }
+
+        $datosErp = $this->res->getDatos();
+        /*************************************************************************************/
+
+
 
 
 

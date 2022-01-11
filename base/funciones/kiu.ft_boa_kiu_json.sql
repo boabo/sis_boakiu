@@ -140,6 +140,7 @@ DECLARE
     v_id_forma_pago_2			integer;
     v_id_boleto_amadeus_forma_pago	integer;
     v_id_erp_data				varchar;
+    v_anio						integer;
 BEGIN
 
     v_nombre_funcion = 'kiu.ft_boa_kiu_json';
@@ -157,7 +158,7 @@ BEGIN
         begin
             v_host=pxp.f_get_variable_global('sincroniza_ip_facturacion');
             v_puerto=pxp.f_get_variable_global('sincroniza_puerto_facturacion');
-            v_dbname=pxp.f_get_variable_global('sincronizar_base_facturacion');
+
 
             select usu.cuenta,
                    usu.contrasena
@@ -172,6 +173,16 @@ BEGIN
             v_semilla = pxp.f_get_variable_global('semilla_erp');
 
             select md5(v_semilla||v_pass_usu) into v_password;
+
+            if (v_parametros.fecha_boleto is not null) then
+            	 select EXTRACT(YEAR FROM v_parametros.fecha_boleto::date) into v_anio;
+                 v_dbname = 'db_facturas_'||v_anio;
+            else
+            	v_dbname=pxp.f_get_variable_global('sincronizar_base_facturacion');
+            end if;
+
+
+
             v_cadena_cnx = 'hostaddr='||v_host||' port='||v_puerto||' dbname='||v_dbname||' user='||p_user||' password='||v_password;
 
 

@@ -176,7 +176,14 @@ BEGIN
 
             if (v_parametros.fecha_boleto is not null) then
             	 select EXTRACT(YEAR FROM v_parametros.fecha_boleto::date) into v_anio;
-                 v_dbname = 'db_facturas_'||v_anio;
+                 if (v_anio < 2021) then
+                 	v_dbname = 'db_facturas_2021';
+
+                 else
+                 	v_dbname = 'db_facturas_'||v_anio;
+                 end if;
+
+
             else
             	v_dbname=pxp.f_get_variable_global('sincronizar_base_facturacion');
             end if;

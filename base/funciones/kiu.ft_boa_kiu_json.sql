@@ -141,6 +141,7 @@ DECLARE
     v_id_boleto_amadeus_forma_pago	integer;
     v_id_erp_data				varchar;
     v_anio						integer;
+    v_datos_recuperados			record;
 BEGIN
 
     v_nombre_funcion = 'kiu.ft_boa_kiu_json';
@@ -532,6 +533,30 @@ BEGIN
             /*********************************************/
 
 			/*Eliminamos las formas de pago en Tarjeta*/
+
+            for v_datos_recuperados in (select fp.id_boleto_amadeus_forma_pago
+                                                from obingresos.tboleto_amadeus_forma_pago fp
+                                                where fp.id_boleto_amadeus = v_id_boleto_amadeus) loop
+
+                    	insert into obingresos.ttlog_boleto_amadeus_forma_pago (id_usuario_reg,
+                        															fecha_reg,
+                                                                                    id_boleto_amadeus_forma_pago,
+                                                                                    observaciones,
+                                                                                    estado)
+                                                                                    VALUES (
+                                                                                    p_id_usuario,
+                                                                                    now(),
+                                                                                    v_datos_recuperados.id_boleto_amadeus_forma_pago,
+                                                                                    'Modificación de forma de pago individual',
+                                                                                    'eliminado'
+                                                                                    );
+
+
+                    end loop;
+
+
+
+
             delete from obingresos.tboleto_amadeus_forma_pago
             where id_boleto_amadeus = v_id_boleto_amadeus
             and (numero_tarjeta != '' and numero_tarjeta is not null);
@@ -1046,6 +1071,20 @@ BEGIN
                                                                         null,--17
                                                                         null--18
                                                                     );
+
+
+                insert into obingresos.ttlog_boleto_amadeus_forma_pago (id_usuario_reg,
+                                                                        fecha_reg,
+                                                                        id_boleto_amadeus_forma_pago,
+                                                                        observaciones,
+                                                                        estado)
+                                                                        VALUES (
+                                                                        p_id_usuario,
+                                                                        now(),
+                                                                        v_record_recuperado.id_boleto_amadeus_forma_pago,
+                                                                        'Modificación por la interfaz de consultas',
+                                                                        'eliminado'
+                                                                        );
 
 
 

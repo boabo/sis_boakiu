@@ -127,7 +127,7 @@ class MODBoleto extends MODbase{
 
       //var_dump("aqui el nro",$this->objParam->getParametro('nro_comercio'));
       //Define los parametros para la funcion
-      $this->setParametro('nro_comercio','nro_comercio','integer');
+      $this->setParametro('nro_comercio','nro_comercio','varchar');
 
       //Ejecuta la instruccion
       $this->armarConsulta();

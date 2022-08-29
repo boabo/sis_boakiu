@@ -879,7 +879,7 @@ BEGIN
 
             	  select est.nombre_estable into v_establecimiento
                   from obingresos.testablecimiento_punto_venta est
-                  where est.codigo_estable::integer = v_parametros.nro_comercio::integer;
+                  where est.codigo_estable::varchar = v_parametros.nro_comercio::varchar;
 
                    --  raise exception 'Aqui la respuesta %',v_establecimiento;
                  --Definicion de la respuesta

@@ -26,6 +26,7 @@ class MODBoleto extends MODbase{
         //Define los parametros para la funcion
         $this->setParametro('nro_ticket','nro_ticket','varchar');
         $this->setParametro('fecha_boleto','fecha_boleto','varchar');
+        $this->setParametro('formato','formato','varchar');
 
         //Ejecuta la instruccion
         $this->armarConsulta();

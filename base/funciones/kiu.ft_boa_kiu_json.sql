@@ -197,10 +197,17 @@ BEGIN
 
 
 
-            WITH t_boleto_asociado as
+            WITH t_estado_periodo as (
+                select (con.status_periodo->-1)->>'EstadoTax' EstadoTax, (con.status_periodo->-1)->>'Estado' Estado, con.periodo, con.gestion, con.formato
+                from vef.tcierre_consolidado con
+                where con.periodo = date_part('month',v_parametros.fecha_boleto::date) and con.gestion = date_part('year',v_parametros.fecha_boleto::date)
+                and con.formato = trim(v_parametros.formato)
+            ) ,
+                t_boleto_asociado as
                      (
-                         SELECT tbaf.nro_boleto, td.nroaut, tv.nro_factura, tv.nit, tv.nombre_factura, tv.total_venta,
-                                tv.fecha, tv.id_usuario_reg
+                         SELECT case when tv.cuf is not null then tv.cuf else td.nroaut end as nroaut,
+                             tbaf.nro_boleto, tv.nro_factura, tv.nit, tv.nombre_factura, tv.total_venta,
+                                tv.fecha, tv.id_usuario_reg, tv.cuf, tv.id_venta
                          FROM vef.tboletos_asociados_fact tbaf
                                   inner JOIN vef.tventa tv on tv.id_venta = tbaf.id_venta
                                   inner join vef.tdosificacion td on td.id_dosificacion = tv.id_dosificacion
@@ -303,7 +310,7 @@ BEGIN
                                        FROM decr.tnota nota
                                        inner join t_liqui tl on tl.id_liquidacion::integer = nota.id_liquidacion::integer
                               ), t_factura_pagada AS (
-                                  SELECT tv.nro_factura, tl.id_proceso_wf_factura, tv.fecha, tv.total_venta
+                                  SELECT tv.nro_factura, tl.id_proceso_wf_factura, tv.fecha, tv.total_venta, tv.id_venta, tv.cuf
                                   FROM vef.tventa tv
                                   inner join t_liqui tl on tl.id_proceso_wf_factura::integer = tv.id_proceso_wf::integer
                               ) SELECT tl.id_liquidacion,
@@ -348,6 +355,14 @@ BEGIN
             into v_json
             from (
                      SELECT
+                         (
+                             SELECT ARRAY_TO_JSON(ARRAY_AGG(ROW_TO_JSON(estado_periodo)))
+                             FROM
+                                 (
+                                     SELECT *
+                                     FROM t_estado_periodo
+                                 ) estado_periodo
+                         ) as estado_periodo,
                          (
                              SELECT ARRAY_TO_JSON(ARRAY_AGG(ROW_TO_JSON(boleto_asociado)))
                              FROM

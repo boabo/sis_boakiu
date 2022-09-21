@@ -94,10 +94,13 @@ class ACTBoleto extends ACTbase{
         $data_json = json_decode(preg_replace('/[\x00-\x1F\x80-\xFF]/', '', $response), true);
 
 
+
         $fecha_boleto = date('d/m/Y',strtotime($data_json[0]['issueDate']));
+        $formato = $data_json[0]['source'];
 
 
         $this->objParam->addParametro('fecha_boleto',$fecha_boleto);
+        $this->objParam->addParametro('formato',$formato);
         /*Cambiando para mandar la fecha del boleto y hacer conexion a la nueva base de datos*/
         $this->objFunc=$this->create('MODBoleto');
 
@@ -547,6 +550,91 @@ class ACTBoleto extends ACTbase{
             echo json_encode($send);
 
         }
+
+
+
+
+
+
+    }
+
+     function testcontroller()
+     {
+         $ticketNumber = $this->objParam->getParametro('ticketNumber');
+         $motivo = $this->objParam->getParametro('motivo');
+         $pnrCode = $this->objParam->getParametro('pnrCode');
+         $issueDate = $this->objParam->getParametro('issueDate');
+
+         var_dump($ticketNumber);
+         exit;
+
+         echo 'llega aca';
+     }
+
+    function disabledTicketWithSiat() {
+
+
+        $ticketNumber = $this->objParam->getParametro('ticketNumber');
+        $motivo = $this->objParam->getParametro('motivo');
+        $pnrCode = $this->objParam->getParametro('pnrCode');
+        $issueDate = $this->objParam->getParametro('issueDate');
+        $siatInvoice = $this->objParam->getParametro('siatInvoice');
+        $motivoAnulacionSiat = $this->objParam->getParametro('motivoAnulacionSiat');
+
+        $siatInvoiceObject = json_decode($siatInvoice);
+
+        $data = array(
+            "cuf" => $siatInvoiceObject->cuf,
+            "codigoMotivoAnulacion" => $motivoAnulacionSiat,
+            "credenciales" => '{DB163D83-330A-4AF1-8BF5-3B69F8BC3BED}{D9F9AACF-C49B-4E31-B0AA-C8C30AEDC0FD}'
+        );
+
+
+        $jdata = json_encode($data);
+        $c = curl_init();
+        curl_setopt($c, CURLOPT_URL, 'http://siatboa.boa.bo/FactTKT/Facturacion.svc/AnularFacturaBoleto');
+        curl_setopt($c, CURLOPT_POST, true);
+        curl_setopt($c, CURLOPT_POSTFIELDS, $jdata);
+        curl_setopt($c, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($c, CURLOPT_CONNECTTIMEOUT, 20);
+        curl_setopt($c, CURLOPT_HTTPHEADER, array(
+            'Content-Type: application/json',
+            'Content-Length: ' . strlen($jdata)));
+
+        $ex = curl_exec($c);
+        $status = curl_getinfo($c, CURLINFO_HTTP_CODE);
+        if (!$status) {
+            throw new Exception("No se pudo conectar con el servicio");
+        }
+        curl_close($c);
+        $res = json_decode($ex);
+
+
+        //http://skbpruebas.cloudapp.net/Fact/Facturacion.svc/AnularFacturaBoleto
+        //http://skbpruebas.cloudapp.net/FactTKT/Facturacion.svc/AnularFacturaBoleto
+
+        if($res->AnularFacturaBoletoResult != null && $res->AnularFacturaBoletoResult->Estado) {
+
+            $this->disabledTicket();
+            exit;
+
+        } else {
+
+            //no se pudo anular por que no existe el boleto o no se ha migrado
+            $send = array(
+                "response_from_erp" =>  'FROM SIAT->'.$res->AnularFacturaBoletoResult->Mensaje[0], // todo
+                "success" => false
+            );
+            echo json_encode($send);
+            exit;
+
+        }
+
+
+
+
+        exit;
+
 
 
 

@@ -227,7 +227,7 @@ class ACTBoleto extends ACTbase{
 
         for ($i=0; $i < $recuperar_codigo_comercio; $i++) {
 
-            if ($data_json[0]['concilliation'][$i] && ($data_json[0]['concilliation'][$i]['Formato'] == 'LINKSER')) {
+            if ($data_json[0]['concilliation'][$i]['TerminalNumber'] != NULL && $data_json[0]['concilliation'][$i] && ($data_json[0]['concilliation'][$i]['Formato'] == 'LINKSER')) {
 
               $nro_comercio = $data_json[0]['concilliation'][$i]['TerminalNumber'];
 
@@ -249,7 +249,7 @@ class ACTBoleto extends ACTbase{
               $establecimiento = ($resultado['establecimiento']);
               //var_dump("aqui resultado",$establecimiento);
               $data_json[0]['concilliation'][$i] += ["NameComercio"=>$establecimiento];
-            } elseif ($data_json[0]['concilliation'][$i] && ($data_json[0]['concilliation'][$i]['Formato'] == 'ATC')) {
+            } elseif ($data_json[0]['concilliation'][$i]['EstablishmentCode'] != NULL && $data_json[0]['concilliation'][$i] && ($data_json[0]['concilliation'][$i]['Formato'] == 'ATC')) {
               $nro_comercio = $data_json[0]['concilliation'][$i]['EstablishmentCode'];
 
               $this->objParam->addParametro('nro_comercio',$nro_comercio);
@@ -558,7 +558,7 @@ class ACTBoleto extends ACTbase{
 
     }
 
-     function testcontroller()
+function testcontroller()
      {
          $ticketNumber = $this->objParam->getParametro('ticketNumber');
          $motivo = $this->objParam->getParametro('motivo');
@@ -1081,7 +1081,7 @@ class ACTBoleto extends ACTbase{
 
       for ($i=0; $i < $recuperar_codigo_comercio; $i++) {
 
-          if ($data_json[$i] && ($data_json[$i]['Formato'] == 'LINKSER')) {
+          if ($data_json[$i]['TerminalNumber'] != NULL && $data_json[$i] && ($data_json[$i]['Formato'] == 'LINKSER')) {
 
             $nro_comercio = $data_json[$i]['TerminalNumber'];
 
@@ -1106,24 +1106,29 @@ class ACTBoleto extends ACTbase{
           } else { //if ($data_json[$i] && ($data_json[$i]['Formato'] == 'ATC')) {
             $nro_comercio = $data_json[$i]['EstablishmentCode'];
 
-            $this->objParam->addParametro('nro_comercio',$nro_comercio);
+            if ($nro_comercio != NULL) {
+              $this->objParam->addParametro('nro_comercio',$nro_comercio);
 
-            $this->objFunc=$this->create('MODBoleto');
-            $this->resData=$this->objFunc->recuperarNombreEstablecimiento($this->objParam);
+              $this->objFunc=$this->create('MODBoleto');
+              $this->resData=$this->objFunc->recuperarNombreEstablecimiento($this->objParam);
 
-            if($this->resData->getTipo()!='EXITO'){
+              if($this->resData->getTipo()!='EXITO'){
 
-                $this->resData->imprimirRespuesta($this->resData->generarJson());
-                exit;
+                  $this->resData->imprimirRespuesta($this->resData->generarJson());
+                  exit;
+              }
+
+              $resultado = $this->resData->getDatos();
+
+              //var_dump("aqi llega el dato",$resultado);
+
+              $establecimiento = ($resultado['establecimiento']);
+              //var_dump("aqui resultado",$establecimiento);
+              $data_json[$i] += ["NameComercio"=>$establecimiento];
+            } else {
+              $data_json = Null;
             }
 
-            $resultado = $this->resData->getDatos();
-
-            //var_dump("aqi llega el dato",$resultado);
-
-            $establecimiento = ($resultado['establecimiento']);
-            //var_dump("aqui resultado",$establecimiento);
-            $data_json[$i] += ["NameComercio"=>$establecimiento];
           }
       }
       /******************************************************/
@@ -1150,13 +1155,6 @@ class ACTBoleto extends ACTbase{
 
 
   }
-
-    function verFacturaErpBoleto(){
-        $this->objFunc=$this->create('MODBoleto');
-        $this->res=$this->objFunc->verFacturaErpBoleto($this->objParam);
-        $this->res->imprimirRespuesta($this->res->generarJson());
-    }
-    
 }
 
 ?>

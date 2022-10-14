@@ -1155,6 +1155,13 @@ function testcontroller()
 
 
   }
+
+    function verFacturaErpBoleto(){
+        $this->objFunc=$this->create('MODBoleto');
+        $this->res=$this->objFunc->verFacturaErpBoleto($this->objParam);
+        $this->res->imprimirRespuesta($this->res->generarJson());
+    }
+
 }
 
 ?>

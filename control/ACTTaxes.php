@@ -35,6 +35,7 @@ class ACTTaxes extends ACTbase{
                 'Content-Type: application/json'
             ),
         ));
+        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
         $response = curl_exec($curl);
 
 
@@ -70,6 +71,8 @@ class ACTTaxes extends ACTbase{
                 'Content-Type: application/json'
             ),
         ));
+        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER,FALSE);
+
         $response = curl_exec($curl);
 
 

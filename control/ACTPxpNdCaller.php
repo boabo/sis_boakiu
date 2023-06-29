@@ -17,8 +17,12 @@ class ACTPxpNdCaller extends ACTbase{
     function doRequest() {
 
         $controller = $this->objParam->getParametro('controller');
-        $method = $this->objParam->getParametro('method');
+        $method = $this->objParam->getParametro('methodToNd');
         $params = $this->objParam->getParametro('params');
+
+
+
+
 
         $curl = curl_init();
         curl_setopt_array($curl, array(
@@ -36,8 +40,9 @@ class ACTPxpNdCaller extends ACTbase{
                 'Content-Type: application/json'
             ),
         ));
+        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, FALSE);
         $response = curl_exec($curl);
-
+       
         curl_close($curl);
         echo $response;
         exit;

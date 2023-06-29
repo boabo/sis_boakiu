@@ -35,6 +35,8 @@ class ACTBoleto extends ACTbase{
                 'Content-Type: application/json'
             ),
         ));
+        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER,FALSE);
+
         $response = curl_exec($curl);
 
         curl_close($curl);
@@ -45,6 +47,7 @@ class ACTBoleto extends ACTbase{
 
     }
   function getTicketInformationRecursive() {
+
         $nro_ticket = $this->objParam->getParametro('nro_ticket');
 
         // $this->objFunc=$this->create('MODBoleto');
@@ -85,6 +88,8 @@ class ACTBoleto extends ACTbase{
                 'Content-Type: application/json'
             ),
         ));
+        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER,FALSE);
+
 
         $response = curl_exec($curl);
 
@@ -120,9 +125,10 @@ class ACTBoleto extends ACTbase{
 
 
         /*Aqui aumentando para que recuperemos solo la forma de pago tarjeta*/
-        $formas_pago = count($data_json[0]['payment']);
+      $formas_pago = isset($data_json[0]['payment']) ? count($data_json[0]['payment']) : 0;
 
-        $forma_pago_cc = array();
+
+      $forma_pago_cc = array();
 
         for ($i=0; $i < $formas_pago; $i++) {
             if ($data_json[0]['payment'][$i]['paymentCode'] == 'CC' && $data_json[0]['payment'][$i]['paymentAmount'] > 0) {
@@ -132,9 +138,10 @@ class ACTBoleto extends ACTbase{
         /********************************************************************/
 
         /*Aqui aumentando para que recuperemos solo la forma de pago tarjeta desde las modificaciones de STAGE*/
-        $formas_pago_modificadas = count($data_json[0]['accountingPayment']);
+      $formas_pago_modificadas = isset($data_json[0]['accountingPayment']) ? count($data_json[0]['accountingPayment']) : 0;
 
-        $forma_pago_cc_modificadas_stage = array();
+
+      $forma_pago_cc_modificadas_stage = array();
 
         for ($i=0; $i < $formas_pago_modificadas; $i++) {
             if ($data_json[0]['accountingPayment'][$i]['payCode'] == 'CC' && $data_json[0]['accountingPayment'][$i]['payAmount'] > 0) {
@@ -176,10 +183,12 @@ class ACTBoleto extends ACTbase{
 
         }
 
+
         $id_medio_pago_originales = array();
         $medios_pago_originales_stage = array();
-        $formas_pago_originales = count($data_json[0]['payment']);
-        /*Aqui para verificar si llega como external payments Ismael Valdivia(22/10/2021)*/
+      $formas_pago_originales = isset($data_json[0]['payment']) ? count($data_json[0]['payment']) : 0;
+
+      /*Aqui para verificar si llega como external payments Ismael Valdivia(22/10/2021)*/
         $es_external = '';
         /*********************************************************************************/
 
@@ -221,7 +230,9 @@ class ACTBoleto extends ACTbase{
 
         /*Recuperar el Codigo de Comercio para la Conciliacion*/
         $consiliacion = $data_json[0]['concilliation'];
-        $recuperar_codigo_comercio = count($data_json[0]['concilliation']);
+      $recuperar_codigo_comercio = isset($data_json[0]['concilliation']) ? count($data_json[0]['concilliation']) : 0;
+
+
 
         $codigo_comercio_erp = array();
 
@@ -272,6 +283,8 @@ class ACTBoleto extends ACTbase{
               $data_json[0]['concilliation'][$i] += ["NameComercio"=>$establecimiento];
             }
         }
+
+
         /******************************************************/
         //var_dump("aqui llega datos",$data_json[0]); exit;
         if($data_json != null) {
@@ -315,7 +328,7 @@ class ACTBoleto extends ACTbase{
         $array = array();
 
 
-        $conexion = new ConexionSqlServer('172.17.110.6', 'SPConnection', 'Passw0rd', 'DBStage');
+        $conexion = new ConexionSqlServer('172.17.110.6', 'DBStage', 'SPConnection', 'Passw0rd');
         $conn = $conexion->conectarSQL();
         //$query_string = "exec DBStage.dbo.fn_getTicketInformation @ticketNumber= 9303852215072 "; // boleto miami 9303852215072
         //$query_string = "Select DBStage.dbo.fn_getTicketInformation('9302404396356') "; // boleto miami 9303852215072
@@ -441,7 +454,7 @@ class ACTBoleto extends ACTbase{
             $send = array(
                 "datos" =>  $array,
                 "ticket_information" =>  $data,
-                "total" => count($array),
+                "total" => isset($array) ? count($array) : 0,
             );
 
             echo json_encode($send);
@@ -466,6 +479,7 @@ class ACTBoleto extends ACTbase{
         $this->objFunc=$this->create('sis_ventas_facturacion/MODConsultaBoletos');
         $this->res=$this->objFunc->consultaBoletoInhabilitacion($this->objParam);
 
+
         if($this->res->getTipo()!='EXITO'){
 
 			$this->res->imprimirRespuesta($this->res->generarJson());
@@ -473,12 +487,15 @@ class ACTBoleto extends ACTbase{
 		}
 
         $res_erp = $this->res->getDatos();
+
+
         if($res_erp["inhabilitar"] === 'true' || $res_erp["periodo"] === 'true') {
 
             //debemos actualizar tambien en el stage
 
 
             $curl = curl_init();
+
             curl_setopt_array($curl, array(
                 CURLOPT_URL => $_SESSION['_PXP_ND_URL'].'/api/boa-stage-nd/Ticket/updateTicketStatus',
                 CURLOPT_RETURNTRANSFER => true,
@@ -492,7 +509,7 @@ class ACTBoleto extends ACTbase{
                     "ticketNumber": '.$ticketNumber.',
                     "pnrCode": "'.$pnrCode.'",
                     "issueDate": "'.$issueDate.'",
-                    "motivo": "'.motivo.'"
+                    "motivo": "'.$motivo.'"
                 }
                 ',
                 CURLOPT_HTTPHEADER => array(
@@ -500,6 +517,9 @@ class ACTBoleto extends ACTbase{
                     'Content-Type: application/json'
                 ),
             ));
+
+            curl_setopt($curl, CURLOPT_SSL_VERIFYPEER,FALSE);
+
             $response = curl_exec($curl);
 
             curl_close($curl);
@@ -541,6 +561,7 @@ class ACTBoleto extends ACTbase{
             echo json_encode($send);
 
         } else {
+
 
             //no se pudo anular por que no existe el boleto o no se ha migrado
             $send = array(
@@ -1064,7 +1085,7 @@ function testcontroller()
               'Content-Type: application/json'
           ),
       ));
-
+      curl_setopt($curl, CURLOPT_SSL_VERIFYPEER,FALSE);
       $response = curl_exec($curl);
 
 
@@ -1075,9 +1096,10 @@ function testcontroller()
 
       /*Recuperar el Codigo de Comercio para la Conciliacion*/
       $consiliacion = $data_json;
-      $recuperar_codigo_comercio = count($data_json);
+        $recuperar_codigo_comercio = isset($data_json) ? count($data_json) : 0;
 
-      $codigo_comercio_erp = array();
+
+        $codigo_comercio_erp = array();
 
       for ($i=0; $i < $recuperar_codigo_comercio; $i++) {
 

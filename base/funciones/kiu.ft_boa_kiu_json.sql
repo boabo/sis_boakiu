@@ -978,7 +978,9 @@ BEGIN
                     FOR  v_record_json_data_detalle IN (SELECT * FROM json_array_elements(v_datos_recuperar :: JSON))
 
                     loop
-
+					if ((v_record_json_data_detalle->>'id_medio_pago') = '') then
+                    	raise exception 'El medio de pago no puede ser vacio, verifique el medio de pago seleccionado.';
+                    end if;
                     SELECT mp.name,
                            mp.mop_code,
                            fp.fop_code
@@ -1124,6 +1126,10 @@ BEGIN
                     FOR  v_record_json_data_detalle IN (SELECT * FROM json_array_elements(v_datos_recuperar :: JSON))
 
                     loop
+
+                    if ((v_record_json_data_detalle->>'id_medio_pago') = '') then
+                    	raise exception 'El medio de pago no puede ser vacio, verifique el medio de pago seleccionado.';
+                    end if;
 
                     /*Recuperamos el codigo de la forma de pago y en el cod de la tarjeta para el control de tarjetas*/
                     SELECT mp.name,

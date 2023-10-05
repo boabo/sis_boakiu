@@ -111,6 +111,7 @@ class ACTBoleto extends ACTbase{
                 "message" =>  $message_error,
             );
             echo json_encode($send);
+            exit;
 
         }
 

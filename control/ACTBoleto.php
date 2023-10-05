@@ -101,8 +101,7 @@ class ACTBoleto extends ACTbase{
         if ($httpCode == 500) {
             $message_error = 'Error 500: Web server error. Contact the administrator';
             if (isset($data_json['error'])) {
-                $error_message = $data_json['error']['message'];
-                echo "Error 500: $error_message";
+                $message_error = $data_json['error']['message'];
             }
 
             $send = array(

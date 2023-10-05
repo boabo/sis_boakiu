@@ -92,11 +92,30 @@ class ACTBoleto extends ACTbase{
 
 
         $response = curl_exec($curl);
+        $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+
+      curl_close($curl);
+
+      $data_json = json_decode(preg_replace('/[\x00-\x1F\x80-\xFF]/', '', $response), true);
+
+        if ($httpCode == 500) {
+            $message_error = 'Error 500: Web server error. Contact the administrator';
+            if (isset($data_json['error'])) {
+                $error_message = $data_json['error']['message'];
+                echo "Error 500: $error_message";
+            }
+
+            $send = array(
+                "error" => false,
+                "errorTicket" => true,
+                "message" =>  $message_error,
+            );
+            echo json_encode($send);
+
+        }
 
 
-        curl_close($curl);
 
-        $data_json = json_decode(preg_replace('/[\x00-\x1F\x80-\xFF]/', '', $response), true);
 
 
 

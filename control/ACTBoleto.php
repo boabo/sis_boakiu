@@ -105,8 +105,9 @@ class ACTBoleto extends ACTbase{
             }
 
             $send = array(
-                "error" => false,
+                "error" => true,
                 "errorTicket" => true,
+                "mensaje" =>  $message_error,
                 "message" =>  $message_error,
             );
             echo json_encode($send);

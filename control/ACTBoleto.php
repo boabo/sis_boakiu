@@ -104,14 +104,20 @@ class ACTBoleto extends ACTbase{
                 $message_error = $data_json['error']['message'];
             }
 
-            $send = array(
+            /*$send = array(
                 "error" => true,
                 "errorTicket" => true,
                 "mensaje" =>  $message_error,
                 "message" =>  $message_error,
             );
             echo json_encode($send);
+            exit;*/
+
+            $this->mensajeExito = new Mensaje();
+            $this->mensajeExito->setMensaje('ERROR', 'OBTENER DATOS', $message_error, 'control');
+            return($this->mensajeExito->imprimirRespuesta($this->mensajeExito->generarJson()));
             exit;
+
 
         }
 

@@ -113,11 +113,17 @@ class ACTBoleto extends ACTbase{
             echo json_encode($send);
             exit;*/
 
-            $this->mensajeExito = new Mensaje();
+           /* $this->mensajeExito = new Mensaje();
             $this->mensajeExito->setMensaje('ERROR', 'OBTENER DATOS', $message_error, 'control');
-            return($this->mensajeExito->imprimirRespuesta($this->mensajeExito->generarJson()));
+            return($this->mensajeExito->imprimirRespuesta($this->mensajeExito->generarJson()));*/
+
+            $this->mensajeRes=new Mensaje();
+            $this->mensajeRes->setMensaje('ERROR','ACTBoleto.php',$message_error, $message_error,'control');
 
 
+            //devolver respuesta
+            $this->mensajeRes->imprimirRespuesta($this->mensajeRes->generarJson());
+            exit;
         }
 
 

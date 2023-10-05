@@ -116,7 +116,6 @@ class ACTBoleto extends ACTbase{
             $this->mensajeExito = new Mensaje();
             $this->mensajeExito->setMensaje('ERROR', 'OBTENER DATOS', $message_error, 'control');
             return($this->mensajeExito->imprimirRespuesta($this->mensajeExito->generarJson()));
-            exit;
 
 
         }

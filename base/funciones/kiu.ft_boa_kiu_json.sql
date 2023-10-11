@@ -551,7 +551,8 @@ BEGIN
 
             for v_datos_recuperados in (select fp.id_boleto_amadeus_forma_pago
                                                 from obingresos.tboleto_amadeus_forma_pago fp
-                                                where fp.id_boleto_amadeus = v_id_boleto_amadeus) loop
+                                                where fp.id_boleto_amadeus = v_id_boleto_amadeus
+                                                and (fp.numero_tarjeta != '' and fp.numero_tarjeta is not null)) loop
 
                     	insert into obingresos.ttlog_boleto_amadeus_forma_pago (id_usuario_reg,
                         															fecha_reg,

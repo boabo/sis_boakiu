@@ -132,11 +132,13 @@ class ACTBoleto extends ACTbase{
 
 
         $fecha_boleto = date('d/m/Y',strtotime($data_json[0]['issueDate']));
+        $codigo_agente = $data_json[0]['issueAgent'];
         $formato = $data_json[0]['source'];
 
 
         $this->objParam->addParametro('fecha_boleto',$fecha_boleto);
         $this->objParam->addParametro('formato',$formato);
+        $this->objParam->addParametro('codigo_agente',$codigo_agente);
         /*Cambiando para mandar la fecha del boleto y hacer conexion a la nueva base de datos*/
         $this->objFunc=$this->create('MODBoleto');
 
